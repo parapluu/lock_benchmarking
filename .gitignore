@@ -1,5 +1,10 @@
-CMakeCache.txt
-CMakeFiles
-Makefile
-cmake_install.cmake
-install_manifest.txt
+*.o
+*~
+*.png
+*.dat
+\#*#
+benchmark_reads
+benchmark_80_percent_reads
+benchmark_writes
+test_multi_writers_queue
+test_simple_delayed_writers_lock
