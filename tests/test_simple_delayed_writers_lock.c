@@ -15,7 +15,7 @@ void test_writer(void * pointer_increment){
 }
 
 int test_create(){
-
+    sdwlock_register_this_thread();
     SimpleDelayedWritesLock * lock = sdwlock_create(&test_writer);
     sdwlock_free(lock);
     return 1;
@@ -24,6 +24,7 @@ int test_create(){
 
 int test_write_lock(){
     test_write_var = NULL;
+    sdwlock_register_this_thread();
     SimpleDelayedWritesLock * lock = sdwlock_create(&test_writer);
     sdwlock_write(lock, TO_VP(1));
     sdwlock_free(lock);
