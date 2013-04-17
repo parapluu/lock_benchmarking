@@ -66,7 +66,6 @@ bool tryReadSpinningInQueue(SimpleDelayedWritesLock * lock, Node * myNode){
     for(int i = 0; i < NUMBER_OF_READ_SPIN_ATTEMPTS; i++){
         if(node == NULL){
             indicateReadEnter(lock);
-            //TODO
             if(ACCESS_ONCE(lock->endOfQueue) != NULL){
                 indicateReadExit(lock);
             }else{
@@ -172,7 +171,6 @@ void sdwlock_write_read_unlock(SimpleDelayedWritesLock * lock) {
     Node * node = &myNode;
     flushWriteQueue(lock, &node->writeQueue);
     disableReadSpinning(node);
-    //TODO wait until all read spinners are gone
     if (ACCESS_ONCE(node->next) == NULL) {
         if (__sync_bool_compare_and_swap(&lock->endOfQueue, node, NULL)){
             return;
