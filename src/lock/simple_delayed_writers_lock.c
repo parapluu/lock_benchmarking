@@ -1,11 +1,19 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <pthread.h>
-
+#include <limits.h>
 
 #include "simple_delayed_writers_lock.h"
 #include "smp_utils.h"
 
+#define NUMBER_OF_READ_SPIN_ATTEMPTS 128
+
+void debugPrintCacheLinePaddedInts(CacheLinePaddedInt * ints, int numOfInts){
+    for(int i = 0; i < numOfInts; i++){
+        printf("%d ", ints[i].value);
+    }
+    printf("\n");
+}
 
 inline
 Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
@@ -16,7 +24,6 @@ Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
         x = ACCESS_ONCE(*pointerToOldValue);
     }
 }
-
 
 __thread Node myNode;
 __thread int myId;
@@ -40,6 +47,54 @@ void waitUntilAllReadersAreGone(SimpleDelayedWritesLock * lock){
             __sync_synchronize();
         };
     }
+}
+
+inline
+void disableReadSpinning(Node * node){
+    node->readSpinningEnabled.value = false;
+    __sync_synchronize();
+    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
+        while(ACCESS_ONCE(node->readSpinnerFlags[i].value) > 0){    
+            __sync_synchronize();
+        };
+    }
+}
+
+inline
+bool tryReadSpinningInQueue(SimpleDelayedWritesLock * lock, Node * myNode){
+    Node * node = lock->endOfQueue;
+    for(int i = 0; i < NUMBER_OF_READ_SPIN_ATTEMPTS; i++){
+        if(node == NULL){
+            indicateReadEnter(lock);
+            //TODO
+            if(ACCESS_ONCE(lock->endOfQueue) != NULL){
+                indicateReadExit(lock);
+            }else{
+                return true;
+            }
+        }else if(ACCESS_ONCE(node->readSpinningEnabled.value)){
+            __sync_fetch_and_add(&node->readSpinnerFlags[myId % NUMBER_OF_READER_GROUPS].value, 1);
+            if(ACCESS_ONCE(node->readSpinningEnabled.value)){
+                do{//the read spinning
+                    __sync_synchronize();
+                }while(ACCESS_ONCE(node->readSpinningEnabled.value));
+                myNode->readLockIsSpinningOnNode = true;
+                myNode->readLockSpinningNode = node;
+                return true;
+            }else{
+                __sync_fetch_and_sub(&node->readSpinnerFlags[myId % NUMBER_OF_READER_GROUPS].value, 1);
+            }
+        }else{
+            __sync_synchronize();
+        }
+        node = ACCESS_ONCE(lock->endOfQueue);
+    }
+    return false;
+}
+
+inline
+void indicateReadExitFromQueueNode(Node * node){
+    __sync_fetch_and_sub(&node->readSpinnerFlags[myId % NUMBER_OF_READER_GROUPS].value, 1);
 }
  
 SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *)){
@@ -68,6 +123,11 @@ void sdwlock_register_this_thread(){
     node->locked.value = false;
     node->next = NULL;
     node->readLockIsWriteLock = false;
+    node->readLockIsSpinningOnNode = false;
+    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
+        node->readSpinnerFlags[i].value = 0;
+    }
+    node->readSpinningEnabled.value = false;
     mwqueue_initialize(&node->writeQueue);
 }
 
@@ -84,6 +144,7 @@ void sdwlock_write(SimpleDelayedWritesLock *lock, void * writeInfo) {
 void sdwlock_write_read_lock(SimpleDelayedWritesLock *lock) {
     Node * node = &myNode;
     Node * predecessor = get_and_set_node_ptr(&lock->endOfQueue, node);
+    node->readSpinningEnabled.value = true;//mb in next statement
     mwqueue_reset_fully_read(&node->writeQueue);
     if (predecessor != NULL) {
         node->locked.value = true;
@@ -110,6 +171,8 @@ void flushWriteQueue(SimpleDelayedWritesLock * lock, MWQueue * writeQueue){
 void sdwlock_write_read_unlock(SimpleDelayedWritesLock * lock) {
     Node * node = &myNode;
     flushWriteQueue(lock, &node->writeQueue);
+    disableReadSpinning(node);
+    //TODO wait until all read spinners are gone
     if (ACCESS_ONCE(node->next) == NULL) {
         if (__sync_bool_compare_and_swap(&lock->endOfQueue, node, NULL)){
             return;
@@ -124,7 +187,7 @@ void sdwlock_write_read_unlock(SimpleDelayedWritesLock * lock) {
     __sync_synchronize();
 }
 
-
+inline
 void convertReadLockToWriteLock(SimpleDelayedWritesLock *lock, Node * node){
     node->readLockIsWriteLock = true;
     sdwlock_write_read_lock(lock);
@@ -137,9 +200,11 @@ void sdwlock_read_lock(SimpleDelayedWritesLock *lock) {
         indicateReadEnter(lock);
         if(ACCESS_ONCE(lock->endOfQueue) != NULL){
             indicateReadExit(lock);
-            convertReadLockToWriteLock(lock, node);
+            if(!tryReadSpinningInQueue(lock, node)){
+                convertReadLockToWriteLock(lock, node);
+            }
         }
-    }else{
+    }else if(!tryReadSpinningInQueue(lock, node)){
         convertReadLockToWriteLock(lock, node);
     }
 }
@@ -149,6 +214,9 @@ void sdwlock_read_unlock(SimpleDelayedWritesLock *lock) {
     if(node->readLockIsWriteLock){
         sdwlock_write_read_unlock(lock);
         node->readLockIsWriteLock = false;
+    }else if(node->readLockIsSpinningOnNode){
+        indicateReadExitFromQueueNode(node->readLockSpinningNode);
+        node->readLockIsSpinningOnNode = false;
     } else {
         indicateReadExit(lock);
     }
