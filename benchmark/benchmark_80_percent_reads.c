@@ -14,7 +14,7 @@ int main(int argc, char **argv){
                           1000000               /*int numberOfOperationsPerThread*/,
                           0                     /*int iterationsSpentInWriteCriticalSection*/,
                           0                     /*int iterationsSpentInReadCriticalSection*/,
-                          "reads_benchmark"     /*char benchmark_identifier[]*/);
+                          "80_percent_reads_benchmark"     /*char benchmark_identifier[]*/);
 
 
     exit(0);

@@ -106,8 +106,9 @@ void sdwlock_write_read_lock(SimpleDelayedWritesLock *lock) {
         while (ACCESS_ONCE(node->locked.value)) {
             __sync_synchronize();
         }
+    }else{
+        waitUntilAllReadersAreGone(lock);
     }
-    waitUntilAllReadersAreGone(lock);
 }
 
 void flushWriteQueue(SimpleDelayedWritesLock * lock, MWQueue * writeQueue){
