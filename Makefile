@@ -1,74 +1,92 @@
 
+GIT_COMMIT = `date +'%y.%m.%d_%H.%M.%S'`_`git rev-parse HEAD`
+BENCHMARK_NUM_OF_THREADS = 1 2
 CC = gcc
-CFLAGS = -I. -Ilock -Idatastructures -Itests -Iutils  -O3 -std=gnu99 -Wall -g -pthread
-TEST_MULTI_WRITERS_QUEUE_OBJECTS = multi_writers_queue.o test_multi_writers_queue.o
-TEST_SIMPLE_DELAYED_WRITERS_OBJECTS = multi_writers_queue.o test_simple_delayed_writers_lock.o simple_delayed_writers_lock.o
-BENCHMARK_OBJECTS = multi_writers_queue.o simple_delayed_writers_lock.o benchmark_functions.o
+CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils  -O3 -std=gnu99 -Wall -g -pthread
+TEST_MULTI_WRITERS_QUEUE_OBJECTS = bin/multi_writers_queue.o bin/test_multi_writers_queue.o
+TEST_SIMPLE_DELAYED_WRITERS_OBJECTS = bin/multi_writers_queue.o bin/test_simple_delayed_writers_lock.o bin/simple_delayed_writers_lock.o
+BENCHMARK_OBJECTS = bin/multi_writers_queue.o bin/simple_delayed_writers_lock.o bin/benchmark_functions.o
 LIBS =
 
-all: test_multi_writers_queue test_simple_delayed_writers_lock benchmark_writes benchmark_reads benchmark_80_percent_reads
+all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark
 
-test_multi_writers_queue: $(TEST_MULTI_WRITERS_QUEUE_OBJECTS)
-	$(CC) -o test_multi_writers_queue $(TEST_MULTI_WRITERS_QUEUE_OBJECTS) $(LIBS) $(CFLAGS)
+bin/test_multi_writers_queue: $(TEST_MULTI_WRITERS_QUEUE_OBJECTS)
+	$(CC) -o bin/test_multi_writers_queue $(TEST_MULTI_WRITERS_QUEUE_OBJECTS) $(LIBS) $(CFLAGS)
 
-test_simple_delayed_writers_lock: $(TEST_SIMPLE_DELAYED_WRITERS_OBJECTS)
-	$(CC) -o test_simple_delayed_writers_lock $(TEST_SIMPLE_DELAYED_WRITERS_OBJECTS) $(LIBS) $(CFLAGS)
+bin/test_simple_delayed_writers_lock: $(TEST_SIMPLE_DELAYED_WRITERS_OBJECTS)
+	$(CC) -o bin/test_simple_delayed_writers_lock $(TEST_SIMPLE_DELAYED_WRITERS_OBJECTS) $(LIBS) $(CFLAGS)
 
-benchmark_writes: $(BENCHMARK_OBJECTS) benchmark_writes.o
-	$(CC) -o benchmark_writes $(BENCHMARK_OBJECTS) benchmark_writes.o $(LIBS) $(CFLAGS)
+bin/mixed_ops_benchmark: $(BENCHMARK_OBJECTS)  bin/mixed_ops_benchmark.o
+	$(CC) -o bin/mixed_ops_benchmark $(BENCHMARK_OBJECTS) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
 
-benchmark_reads: $(BENCHMARK_OBJECTS)  benchmark_reads.o
-	$(CC) -o benchmark_reads $(BENCHMARK_OBJECTS) benchmark_reads.o $(LIBS) $(CFLAGS)
+bin/test_simple_delayed_writers_lock.o: src/tests/test_simple_delayed_writers_lock.c src/tests/test_framework.h src/utils/smp_utils.h
+	$(CC) $(CFLAGS) -c src/tests/test_simple_delayed_writers_lock.c ; \
+	mv *.o bin/
 
-benchmark_80_percent_reads: $(BENCHMARK_OBJECTS)  benchmark_80_percent_reads.o
-	$(CC) -o benchmark_80_percent_reads $(BENCHMARK_OBJECTS) benchmark_80_percent_reads.o $(LIBS) $(CFLAGS)
+bin/test_multi_writers_queue.o: src/tests/test_multi_writers_queue.c src/tests/test_framework.h
+	$(CC) $(CFLAGS) -c src/tests/test_multi_writers_queue.c ; \
+	mv *.o bin/
 
-run_test_multi_writers_queue: test_multi_writers_queue
-	valgrind --leak-check=yes ./test_multi_writers_queue
+bin/benchmark_functions.o: src/benchmark/benchmark_functions.c src/benchmark/benchmark_functions.h src/lock/simple_delayed_writers_lock.h src/utils/smp_utils.h
+	$(CC) $(CFLAGS) -c src/benchmark/benchmark_functions.c ; \
+	mv *.o bin/
 
-run_test_simple_delayed_writers_lock: test_simple_delayed_writers_lock
-	./test_simple_delayed_writers_lock
+bin/mixed_ops_benchmark.o: src/benchmark/benchmark_functions.h src/benchmark/mixed_ops_benchmark.c
+	$(CC) $(CFLAGS) -c src/benchmark/mixed_ops_benchmark.c ; \
+	mv *.o bin/
 
-run_test_simple_delayed_writers_lock_valgrind: test_simple_delayed_writers_lock
-	valgrind --leak-check=yes ./test_simple_delayed_writers_lock
+bin/simple_delayed_writers_lock.o: src/lock/simple_delayed_writers_lock.c src/datastructures/multi_writers_queue.h src/utils/smp_utils.h
+	$(CC) $(CFLAGS) -c src/lock/simple_delayed_writers_lock.c ; \
+	mv *.o bin/
 
-run_writes_benchmark: benchmark_writes simple_delayed_writers_lock.o
-	./benchmark_writes 1 2 3 4 5 6 7 8 ; \
-	gnuplot -e "output_filename='writes_benchmark.png'" -e "input_filename='writes_benchmark.dat'" -e "the_title='Writes Benchmark'" benchmark/plot_bench.gp
+bin/multi_writers_queue.o: src/datastructures/multi_writers_queue.c src/datastructures/multi_writers_queue.h src/utils/smp_utils.h
+	$(CC) $(CFLAGS) -c src/datastructures/multi_writers_queue.c ; \
+	mv *.o bin/
 
-run_reads_benchmark: benchmark_reads simple_delayed_writers_lock.o
-	./benchmark_reads 1 2 3 4 5 6 7 8 ; \
-	gnuplot -e "output_filename='reads_benchmark.png'" -e "input_filename='reads_benchmark.dat'" -e "the_title='Reads Benchmark'" benchmark/plot_bench.gp
 
-run_80_percent_reads_benchmark: benchmark_80_percent_reads simple_delayed_writers_lock.o
-	./benchmark_80_percent_reads 1 2 3 4 5 6 7 8 ; \
-	gnuplot -e "output_filename='80_percent_reads_benchmark.png'" -e "input_filename='80_percent_reads_benchmark.dat'" -e "the_title='80 Percent Reads Benchmark'" benchmark/plot_bench.gp
+run_test_multi_writers_queue: bin/test_multi_writers_queue
+	valgrind --leak-check=yes ./bin/test_multi_writers_queue
 
-test_simple_delayed_writers_lock.o: tests/test_simple_delayed_writers_lock.c tests/test_framework.h utils/smp_utils.h
-	$(CC) $(CFLAGS) -c tests/test_simple_delayed_writers_lock.c
+run_test_simple_delayed_writers_lock: bin/test_simple_delayed_writers_lock
+	./bin/test_simple_delayed_writers_lock
 
-test_multi_writers_queue.o: tests/test_multi_writers_queue.c tests/test_framework.h
-	$(CC) $(CFLAGS) -c tests/test_multi_writers_queue.c
+run_test_simple_delayed_writers_lock_valgrind: bin/test_simple_delayed_writers_lock
+	valgrind --leak-check=yes ./bin/test_simple_delayed_writers_lock
 
-benchmark_functions.o: benchmark/benchmark_functions.c benchmark/benchmark_functions.h lock/simple_delayed_writers_lock.h utils/smp_utils.h
-	$(CC) $(CFLAGS) -c benchmark/benchmark_functions.c
+run_writes_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
+	FILE_NAME_PREFIX=benchmark_results/writes_benchmark_$(GIT_COMMIT) ; \
+	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.0 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
+	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
 
-benchmark_writes.o: benchmark/benchmark_functions.h benchmark/benchmark_writes.c
-	$(CC) $(CFLAGS) -c benchmark/benchmark_writes.c
+run_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
+	FILE_NAME_PREFIX=benchmark_results/reads_benchmark_$(GIT_COMMIT) ; \
+	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 1.0 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
+	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
 
-benchmark_reads.o: benchmark/benchmark_functions.h benchmark/benchmark_reads.c
-	$(CC) $(CFLAGS) -c benchmark/benchmark_reads.c
 
-benchmark_80_percent_reads.o: benchmark/benchmark_functions.h benchmark/benchmark_80_percent_reads.c
-	$(CC) $(CFLAGS) -c benchmark/benchmark_80_percent_reads.c
+run_80_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
+	FILE_NAME_PREFIX=benchmark_results/80_percent_reads_benchmark_$(GIT_COMMIT) ; \
+	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.8 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
+	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
 
-simple_delayed_writers_lock.o: lock/simple_delayed_writers_lock.c datastructures/multi_writers_queue.h utils/smp_utils.h
-	$(CC) $(CFLAGS) -c lock/simple_delayed_writers_lock.c
+run_90_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
+	FILE_NAME_PREFIX=benchmark_results/90_percent_reads_benchmark_$(GIT_COMMIT) ; \
+	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.9 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
+	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
 
-multi_writers_queue.o: datastructures/multi_writers_queue.c datastructures/multi_writers_queue.h utils/smp_utils.h
-	$(CC) $(CFLAGS) -c datastructures/multi_writers_queue.c
+
+run_95_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
+	FILE_NAME_PREFIX=benchmark_results/95_percent_reads_benchmark_$(GIT_COMMIT) ; \
+	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.95 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
+	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
+
+run_99_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
+	FILE_NAME_PREFIX=benchmark_results/99_percent_reads_benchmark_$(GIT_COMMIT) ; \
+	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.99 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
+	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
+
 
 clean:
-	rm -f test_multi_writers_queue test_simple_delayed_writers_lock benchmark_writes benchmark_80_percent_reads benchmark_reads *.o
+	rm -f bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/*.o
 
 check-syntax: test_multi_writers_queue
