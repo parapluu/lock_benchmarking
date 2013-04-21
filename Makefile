@@ -10,7 +10,7 @@ BENCHMARK_OBJECTS_ACCESS_SKIPLIST = bin/multi_writers_queue.o bin/simple_delayed
 
 LIBS =
 
-all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/skiplist.o bin/mixed_ops_benchmark_access_skiplist
+all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist
 
 bin/test_multi_writers_queue: $(TEST_MULTI_WRITERS_QUEUE_OBJECTS)
 	$(CC) -o bin/test_multi_writers_queue $(TEST_MULTI_WRITERS_QUEUE_OBJECTS) $(LIBS) $(CFLAGS)
@@ -67,75 +67,35 @@ run_test_simple_delayed_writers_lock: bin/test_simple_delayed_writers_lock
 run_test_simple_delayed_writers_lock_valgrind: bin/test_simple_delayed_writers_lock
 	valgrind --leak-check=yes ./bin/test_simple_delayed_writers_lock
 
-run_all_benchmarks: run_writes_benchmark run_reads_benchmark run_80_percent_reads_benchmark run_90_percent_reads_benchmark run_95_percent_reads_benchmark run_99_percent_reads_benchmark run_writes_access_skiplist_benchmark run_reads_access_skiplist_benchmark run_80_percent_reads_access_skiplist_benchmark run_90_percent_reads_access_skiplist_benchmark run_95_percent_reads_access_skiplist_benchmark run_99_percent_reads_access_skiplist_benchmark
+run_all_benchmarks: bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist
+	./src/benchmark/run_all_benchmarks.sh $(BENCHMARK_NUM_OF_THREADS) 
 
 run_writes_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/writes_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.0 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
+	./src/benchmark/run_mixed_ops_bench.sh $$FILE_NAME_PREFIX 0.0 1000000 1000 1000 $(BENCHMARK_NUM_OF_THREADS)
 
 run_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/reads_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 1.0 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
+	./src/benchmark/run_mixed_ops_bench.sh $$FILE_NAME_PREFIX 1.0 1000000 1000 1000 $(BENCHMARK_NUM_OF_THREADS)
 
 run_80_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/80_percent_reads_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.8 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
-run_90_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/90_percent_reads_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.9 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
+	./src/benchmark/run_mixed_ops_bench.sh $$FILE_NAME_PREFIX 0.8 1000000 1000 1000 $(BENCHMARK_NUM_OF_THREADS)
 
 
-run_95_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/95_percent_reads_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.95 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
-run_99_percent_reads_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/99_percent_reads_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark $$FILE_NAME_PREFIX 0.99 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
-
-run_writes_access_skiplist_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/writes_access_skiplist_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark_access_skiplist $$FILE_NAME_PREFIX 0.0 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
+run_writes_access_skiplist_benchmark: bin/mixed_ops_benchmark_access_skiplist bin/simple_delayed_writers_lock.o
+	FILE_NAME_PREFIX=benchmark_results/writes_benchmark_access_skiplist_$(GIT_COMMIT) ; \
+	./src/benchmark/run_mixed_ops_bench_access_skiplist.sh $$FILE_NAME_PREFIX 0.0 1000000 1 1 $(BENCHMARK_NUM_OF_THREADS)
 
 run_reads_access_skiplist_benchmark: bin/mixed_ops_benchmark_access_skiplist bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/reads_access_skiplist_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark_access_skiplist $$FILE_NAME_PREFIX 1.0 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
+	FILE_NAME_PREFIX=benchmark_results/reads_benchmark_access_skiplist_$(GIT_COMMIT) ; \
+	./src/benchmark/run_mixed_ops_bench_access_skiplist.sh $$FILE_NAME_PREFIX 1.0 1000000 1 1 $(BENCHMARK_NUM_OF_THREADS)
 
-
-run_80_percent_reads_access_skiplist_benchmark: bin/mixed_ops_benchmark_access_skiplist bin/simple_delayed_writers_lock.o
+run_80_access_skiplist_percent_reads_benchmark: bin/mixed_ops_benchmark_access_skiplist bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/80_percent_reads_access_skiplist_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark_access_skiplist $$FILE_NAME_PREFIX 0.8 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
-run_90_percent_reads_access_skiplist_benchmark: bin/mixed_ops_benchmark_access_skiplist bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/90_percent_reads_access_skiplist_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark_access_skiplist $$FILE_NAME_PREFIX 0.9 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
-
-run_95_percent_reads_access_skiplist_benchmark: bin/mixed_ops_benchmark_access_skiplist bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/95_percent_reads_access_skiplist_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark_access_skiplist $$FILE_NAME_PREFIX 0.95 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
-run_99_percent_reads_access_skiplist_benchmark: bin/mixed_ops_benchmark_access_skiplist bin/simple_delayed_writers_lock.o
-	FILE_NAME_PREFIX=benchmark_results/99_percent_reads_access_skiplist_benchmark_$(GIT_COMMIT) ; \
-	./bin/mixed_ops_benchmark_access_skiplist $$FILE_NAME_PREFIX 0.99 1000000 10000 10000 $(BENCHMARK_NUM_OF_THREADS) ; \
-	gnuplot -e "output_filename='$$FILE_NAME_PREFIX.png'" -e "input_filename='$$FILE_NAME_PREFIX.dat'" -e "the_title='80 Percent Reads Benchmark'" src/benchmark/plot_bench.gp
-
+	./src/benchmark/run_mixed_ops_bench_access_skiplist.sh $$FILE_NAME_PREFIX 0.0 1000000 1 1 $(BENCHMARK_NUM_OF_THREADS)
 
 clean:
-	rm -f bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/*.o
+	rm -f bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/*.o
 
 check-syntax: test_multi_writers_queue
