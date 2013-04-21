@@ -9,5 +9,6 @@ benchmark_writes
 test_multi_writers_queue
 test_simple_delayed_writers_lock
 mixed_ops_benchmark
+mixed_ops_benchmark_access_skiplist
 TAGS
 core

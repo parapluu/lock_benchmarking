@@ -7,7 +7,15 @@
 #include <sys/time.h>
 #include "simple_delayed_writers_lock.h"
 #include "smp_utils.h"
+#include "skiplist.h"
 
+
+#define NUMBER_OF_ELEMENTS_IN_DATASTRUCTURE 256
+
+#ifdef ACCESS_SKIPLIST
+KVSet * skiplist;
+unsigned short write_d_rand_seed[3];
+#endif
 
 long numberOfOperationsPerThread = 10000;
 int numberOfThreads = 8;
@@ -25,7 +33,13 @@ typedef struct LockInfoImpl {
 
  void mixed_read_write_benchmark_writer(void * x){
      for(int i = 0; i < iterationsSpentInWriteCriticalSection; i++){
+#ifdef ACCESS_SKIPLIST
+         void * writeValue = (void*)(((long)erand48(write_d_rand_seed)) * NUMBER_OF_ELEMENTS_IN_DATASTRUCTURE + 1);
+         //((void *)(erand48(write_d_rand_seed)*NUMBER_OF_ELEMENTS_IN_DATASTRUCTURE + 1));
+         skiplist->funs.put(skiplist, writeValue);
+#else
          barrier();
+#endif
      }
  }
 
@@ -35,21 +49,32 @@ typedef struct LockInfoImpl {
      LockInfo * li = (LockInfo *) x;
      SimpleDelayedWritesLock * lock = li->lock;
      unsigned short * xsubi = li->xsubi;
+#ifdef ACCESS_SKIPLIST
+     void * lookupSum = 0;
+#endif
      while(!ACCESS_ONCE(benchmarkStarted)){
          __sync_synchronize();
-     } 
+     }
      for(long i = 0; i < numberOfOperationsPerThread; i++){
          if(erand48(xsubi) > percentageRead){
              sdwlock_write(lock, (void *)1);
          }else{
              sdwlock_read_lock(lock);
              for(int u = 0; u < iterationsSpentInReadCriticalSection; u++){
+#ifdef ACCESS_SKIPLIST
+                 void * readValue = (void*)(((long)erand48(xsubi)) * NUMBER_OF_ELEMENTS_IN_DATASTRUCTURE + 1);
+                 lookupSum = lookupSum + (long)skiplist->funs.lookup(skiplist, readValue);
+#else
                  barrier();
+#endif
              }
              sdwlock_read_unlock(lock);
          }
      }
-     pthread_exit(0); 
+     pthread_exit(0);
+#ifdef ACCESS_SKIPLIST
+     return lookupSum;
+#endif
  }
 
  double benchmark_parallel_mixed_read_write(double percentageReadParam, 
@@ -57,6 +82,12 @@ typedef struct LockInfoImpl {
                                           long numberOfOperationsPerThreadParam,
                                           int iterationsSpentInWriteCriticalSectionParam,
                                           int iterationsSpentInReadCriticalSectionParam){
+#ifdef ACCESS_SKIPLIST
+     skiplist = new_skiplist_default();
+     write_d_rand_seed[0] = 1;
+     write_d_rand_seed[1] = 2;
+     write_d_rand_seed[2] = 3;
+#endif
      percentageRead = percentageReadParam;
      numberOfThreads = numberOfThreadsParam;
      numberOfOperationsPerThread = numberOfOperationsPerThreadParam;
@@ -88,6 +119,10 @@ typedef struct LockInfoImpl {
      long benchmarkTime = (timeEnd.tv_sec-timeStart.tv_sec)*1000000 + timeEnd.tv_usec-timeStart.tv_usec;
      double timePerOp = ((double)benchmarkTime)/(((double)numberOfThreads*(double)numberOfOperationsPerThread));
      sdwlock_free(lock);
+#ifdef ACCESS_SKIPLIST
+     skiplist->funs.delete_table(skiplist, NULL, NULL);
+#endif
+
      return timePerOp;
 }
 
@@ -99,6 +134,7 @@ void run_scaling_benchmark(int numOfThreadsArraySize,
                            int iterationsSpentInWriteCriticalSectionParam,
                            int iterationsSpentInReadCriticalSectionParam,
                            char benchmark_identifier[]){
+
 
     char * file_name_buffer = malloc(4096);
     char file_name_format [] = "%s.dat";
@@ -125,6 +161,8 @@ void run_scaling_benchmark(int numOfThreadsArraySize,
     fclose(benchmark_file);
 
     printf("\n\n\033[32m -- BENCHMARKS FOR %s COMPLETED! -- \033[m\n\n", benchmark_identifier);
+
+
 
 }
 
