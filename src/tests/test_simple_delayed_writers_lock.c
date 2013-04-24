@@ -124,7 +124,7 @@ int test_read_write_lock_is_blocking_other_read_lock(){
 
 
 int numberOfOperationsPerThread = 5000;
-#define NUMBER_OF_THREADS 8
+#define NUMBER_OF_THREADS 6
 int count = 0;
 double percentageRead = 0.8;
 
@@ -147,11 +147,11 @@ void mixed_read_write_test_writer(void * lock_counter){
     __sync_synchronize();
     count = ACCESS_ONCE(count) + 1;
     __sync_synchronize();
-    int currentCount = count;
+    int currentCount = ACCESS_ONCE(count);
     //usleep(100);
-    assert(currentCount == count);
-    lc->pendingWrite = false;
     __sync_synchronize();
+    assert(currentCount == ACCESS_ONCE(count));
+    lc->pendingWrite = false;
 }
 
 
@@ -168,12 +168,10 @@ void *mixed_read_write_thread(void *x){
             sdwlock_read_lock(lock);
             assert(!ACCESS_ONCE(lc->pendingWrite));
             assert(lc->logicalWritesInFuture==ACCESS_ONCE(lc->writesInFuture));
-            int currentCount = count;
+            int currentCount = ACCESS_ONCE(count);
             //usleep(100);
-            assert(currentCount == count);
+            assert(currentCount == ACCESS_ONCE(count));
             sdwlock_read_unlock(lock);
-                 
-                
         }
     }
     sdwlock_read_lock(lock);

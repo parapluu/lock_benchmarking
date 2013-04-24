@@ -2,20 +2,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "multi_writers_queue.h"
+
 #include "simple_delayed_writers_lock.h"
 #include "smp_utils.h"
 
-#define NUMBER_OF_READER_GROUPS 8
-
-typedef struct NodeImpl {
-    MWQueue writeQueue;
-    struct NodeImpl * next;
-    char pad1[64];
-    CacheLinePaddedBool locked;
-    char pad2[64];
-    bool readLockIsWriteLock;
-} Node;
 
 inline
 Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
@@ -27,13 +17,6 @@ Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
     }
 }
 
-
-
-typedef struct SimpleDelayedWritesLockImpl {
-    void (*writer)(void *);
-    Node * endOfQueue;
-    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS] __attribute__((aligned(64)));
-} SimpleDelayedWritesLock;
 
 __thread Node myNode;
 __thread int myId;
@@ -61,13 +44,17 @@ void waitUntilAllReadersAreGone(SimpleDelayedWritesLock * lock){
  
 SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *)){
     SimpleDelayedWritesLock * lock = malloc(sizeof(SimpleDelayedWritesLock));
+    sdwlock_initialize(lock, writer);
+    return lock;
+}
+
+void sdwlock_initialize(SimpleDelayedWritesLock * lock, void (*writer)(void *)){
     lock->writer = writer;
     lock->endOfQueue = NULL;
     for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
         lock->readLocks[i].value = 0;
     }
     __sync_synchronize();
-    return lock;
 }
 
 void sdwlock_free(SimpleDelayedWritesLock * lock){
