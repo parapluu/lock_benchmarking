@@ -10,7 +10,7 @@ BENCHMARK_OBJECTS_ACCESS_SKIPLIST = bin/multi_writers_queue.o bin/simple_delayed
 
 LIBS =
 
-all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist
+all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone
 
 bin/test_multi_writers_queue: $(TEST_MULTI_WRITERS_QUEUE_OBJECTS)
 	$(CC) -o bin/test_multi_writers_queue $(TEST_MULTI_WRITERS_QUEUE_OBJECTS) $(LIBS) $(CFLAGS)
@@ -20,6 +20,9 @@ bin/test_simple_delayed_writers_lock: $(TEST_SIMPLE_DELAYED_WRITERS_OBJECTS)
 
 bin/mixed_ops_benchmark: $(BENCHMARK_OBJECTS)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark $(BENCHMARK_OBJECTS) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
+
+bin/rw_bench_clone: bin/multi_writers_queue.o bin/simple_delayed_writers_lock.o  bin/rw_bench_clone.o
+	$(CC) -o bin/rw_bench_clone bin/multi_writers_queue.o bin/simple_delayed_writers_lock.o bin/rw_bench_clone.o $(LIBS) $(CFLAGS)
 
 bin/mixed_ops_benchmark_access_skiplist: $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark_access_skiplist $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
@@ -36,6 +39,9 @@ bin/benchmark_functions.o: src/benchmark/benchmark_functions.c src/benchmark/ben
 	$(CC) $(CFLAGS) -c src/benchmark/benchmark_functions.c ; \
 	mv *.o bin/
 
+bin/rw_bench_clone.o: src/benchmark/rw_bench_clone.c src/benchmark/benchmark_functions.h src/lock/simple_delayed_writers_lock.h src/utils/smp_utils.h
+	$(CC) $(CFLAGS) -c src/benchmark/rw_bench_clone.c ; \
+	mv *.o bin/
 
 bin/benchmark_functions_access_skiplist.o: src/benchmark/benchmark_functions.c src/benchmark/benchmark_functions.h src/lock/simple_delayed_writers_lock.h src/utils/smp_utils.h
 	$(CC) $(CFLAGS) -D ACCESS_SKIPLIST -c src/benchmark/benchmark_functions.c ; \
@@ -69,6 +75,9 @@ run_test_simple_delayed_writers_lock_valgrind: bin/test_simple_delayed_writers_l
 
 run_all_benchmarks: bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist
 	./src/benchmark/run_all_benchmarks.sh $(BENCHMARK_NUM_OF_THREADS) 
+
+run_all_rw_bench_benchmarks: bin/rw_bench_clone
+	./src/benchmark/run_all_rw_bench_clone.sh $(BENCHMARK_NUM_OF_THREADS) 
 
 run_writes_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/writes_benchmark_$(GIT_COMMIT) ; \
