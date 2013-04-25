@@ -1,5 +1,5 @@
-#ifndef __BENCHMARK_KVSET_H__
-#define __BENCHMARK_KVSET_H__
+#ifndef __BENCHMARK_FUNCTIONS_H__
+#define __BENCHMARK_FUNCTIONS_H__
 
 void run_scaling_benchmark(int numOfThreadsArraySize,
                            int* numOfThreadsArray,
