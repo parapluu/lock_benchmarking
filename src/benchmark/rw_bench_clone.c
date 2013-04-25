@@ -6,7 +6,6 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <limits.h>
-#include "rw_bench_clone.h"
 #include "simple_delayed_writers_lock.h"
 #include "smp_utils.h"
 #include "skiplist.h"
