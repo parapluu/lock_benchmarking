@@ -1,10 +1,10 @@
 #include <stdbool.h>
 #include "multi_writers_queue.h"
+#include "common_lock_constants.h"
 
 #ifndef ALL_EQUAL_RDX_LOCK_H
 #define ALL_EQUAL_RDX_LOCK_H
 
-#define NUMBER_OF_READER_GROUPS 8
 
 typedef struct NodeImpl {
     MWQueue writeQueue __attribute__((aligned(64)));

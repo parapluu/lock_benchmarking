@@ -1,10 +1,11 @@
 #include <stdbool.h>
 #include "multi_writers_queue.h"
+#include "common_lock_constants.h"
 
 #ifndef SIMPLE_DELAYED_WRITERS_LOCK_H
 #define SIMPLE_DELAYED_WRITERS_LOCK_H
 
-#define NUMBER_OF_READER_GROUPS 8
+
 
 typedef struct NodeImpl {
     MWQueue writeQueue __attribute__((aligned(64)));

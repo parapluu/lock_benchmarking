@@ -1,8 +1,10 @@
+NUMER_OF_READER_GROUPS=8
 
 GIT_COMMIT = `date +'%y.%m.%d_%H.%M.%S'`_`git rev-parse HEAD`
+
 BENCHMARK_NUM_OF_THREADS = 1 2 3 4 5 6
 CC = gcc
-CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O1 -std=gnu99 -Wall -g -pthread
+CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O1 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS) 
 TEST_MULTI_WRITERS_QUEUE_OBJECTS = bin/multi_writers_queue.o bin/test_multi_writers_queue.o
 
 TEST_LOCK_OBJECTS = bin/multi_writers_queue.o
@@ -11,7 +13,8 @@ BENCHMARK_OBJECTS = bin/multi_writers_queue.o bin/simple_delayed_writers_lock.o 
 BENCHMARK_OBJECTS_ACCESS_SKIPLIST = bin/multi_writers_queue.o bin/simple_delayed_writers_lock.o bin/benchmark_functions_access_skiplist.o bin/skiplist.o
 
 LOCK_SRC_DEPS = src/datastructures/multi_writers_queue.h \
-	        src/utils/smp_utils.h
+	        src/utils/smp_utils.h \
+	        src/lock/common_lock_constants.h
 
 TEST_SRC_DEPS = src/tests/test_framework.h \
 	        src/utils/smp_utils.h
@@ -73,7 +76,7 @@ bin/rw_bench_clone_aer.o: $(RW_BENCH_SRC_DEPS) src/lock/all_equal_rdx_lock.h
 	mv rw_bench_clone.o bin/rw_bench_clone_aer.o
 
 bin/benchmark_functions_access_skiplist.o: src/benchmark/benchmark_functions.c src/benchmark/benchmark_functions.h src/lock/simple_delayed_writers_lock.h src/utils/smp_utils.h
-	$(CC) $(CFLAGS) -D ACCESS_SKIPLIST -c src/benchmark/benchmark_functions.c ; \
+	$(CC) $(CFLAGS) -DACCESS_SKIPLIST -c src/benchmark/benchmark_functions.c ; \
 	mv benchmark_functions.o bin/benchmark_functions_access_skiplist.o
 
 bin/mixed_ops_benchmark.o: src/benchmark/benchmark_functions.c src/benchmark/benchmark_functions.h src/benchmark/mixed_ops_benchmark.c
