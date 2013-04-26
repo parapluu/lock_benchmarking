@@ -11,5 +11,8 @@ test_simple_delayed_writers_lock
 mixed_ops_benchmark
 mixed_ops_benchmark_access_skiplist
 rw_bench_clone
+rw_bench_clone_aer
+rw_bench_clone_sdw
+test_all_equal_rdx_lock
 TAGS
 core
