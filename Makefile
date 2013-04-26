@@ -4,7 +4,7 @@ GIT_COMMIT = `date +'%y.%m.%d_%H.%M.%S'`_`git rev-parse HEAD`
 
 BENCHMARK_NUM_OF_THREADS = 1 2 3 4 5 6
 CC = gcc
-CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O1 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS) 
+CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O3 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS) 
 TEST_MULTI_WRITERS_QUEUE_OBJECTS = bin/multi_writers_queue.o bin/test_multi_writers_queue.o
 
 TEST_LOCK_OBJECTS = bin/multi_writers_queue.o
