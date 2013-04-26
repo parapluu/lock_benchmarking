@@ -6,17 +6,17 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <limits.h>
-#include "simple_delayed_writers_lock.h"
 #include "smp_utils.h"
 #include "skiplist.h"
 #include "smp_utils.h"
-
+#include "support_many_lock_types.h"
 
 //Should be power of 2
 #define NUMBER_OF_ELEMENTS_IN_ARRAYS 64
 #define ELEMENT_POS_MASK (NUMBER_OF_ELEMENTS_IN_ARRAYS-1)
 #define ADD_RAND_NUM_MASK (128-1)
 #define FALSE_SHARING_SECURITY 128
+
 
 typedef struct SeedWrapperImpl{
     char pad1[FALSE_SHARING_SECURITY];
@@ -33,8 +33,8 @@ typedef struct BoolWrapperImpl{
 
 typedef struct LockWrapperImpl{
     char pad1[FALSE_SHARING_SECURITY];
-    SimpleDelayedWritesLock value;
-    char pad2[sizeof(SimpleDelayedWritesLock) % 64 + FALSE_SHARING_SECURITY];
+    LOCK_DATATYPE_NAME value;
+    char pad2[sizeof(LOCK_DATATYPE_NAME) % 64 + FALSE_SHARING_SECURITY];
 } LookWrapper;
 
 //=======================
@@ -42,7 +42,7 @@ typedef struct LockWrapperImpl{
 //=======================
 
 LookWrapper lock_wrapper __attribute__((aligned(64)));
-SimpleDelayedWritesLock * lock = &lock_wrapper.value;
+LOCK_DATATYPE_NAME * lock = &lock_wrapper.value;
 
 SeedWrapper write_d_rand_seed_wrapper __attribute__((aligned(64)));
 unsigned short * write_d_rand_seed = write_d_rand_seed_wrapper.value;
@@ -118,8 +118,8 @@ void mixed_read_write_benchmark_writer(void * x){
 int globalDummy = 0; //To avoid that the compiler optimize away read 
 
 void *mixed_read_write_benchmark_thread(void *lock_pointer){
-    sdwlock_register_this_thread();
-    SimpleDelayedWritesLock * lock = lock_pointer;
+    LOCK_REGISTER_THIS_THREAD();
+    LOCK_DATATYPE_NAME * lock = lock_pointer;
     int privateArray[NUMBER_OF_ELEMENTS_IN_ARRAYS];
     unsigned short xsubi[3];
     myXsubi = xsubi;
@@ -133,13 +133,13 @@ void *mixed_read_write_benchmark_thread(void *lock_pointer){
     }
     while(!ACCESS_ONCE(*benchmarkStoped)){
         if(erand48(xsubi) > imsw.percentageRead){
-            sdwlock_write(lock, (void *)1);
+            LOCK_WRITE(lock, (void *)1);
         }else{
-            sdwlock_read_lock(lock);
+            LOCK_READ_LOCK(lock);
             for(int u = 0; u < imsw.iterationsSpentInReadCriticalSection; u++){
                 WORK_IN_READ_CRITICAL_SECTION_1;
             }
-            sdwlock_read_unlock(lock);
+            LOCK_READ_UNLOCK(lock);
         }
         for(int u = 0; u < imsw.iterationsSpentInNonCriticalSection; u++){
             WORK_IN_NON_CRITICAL_SECTION_1;
@@ -169,7 +169,7 @@ double benchmark_parallel_mixed_read_write(double percentageReadParam,
     imsw.iterationsSpentInNonCriticalSection = iterationsSpentInNonCriticalSectionParam;
     *benchmarkStarted = false;
     *benchmarkStoped = false;
-    sdwlock_initialize(lock, &mixed_read_write_benchmark_writer);
+    LOCK_INITIALIZE(lock, &mixed_read_write_benchmark_writer);
     pthread_t threads[numberOfThreads];
     struct timeval timeStart;
     struct timeval timeEnd;

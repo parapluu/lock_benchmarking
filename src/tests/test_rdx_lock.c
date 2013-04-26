@@ -2,9 +2,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
-#include "simple_delayed_writers_lock.h"
 #include "test_framework.h"
 #include "smp_utils.h"
+#include "support_many_lock_types.h"
+
 
 void * test_write_var = NULL;
 
@@ -15,19 +16,18 @@ void test_writer(void * pointer_increment){
 }
 
 int test_create(){
-    sdwlock_register_this_thread();
-    SimpleDelayedWritesLock * lock = sdwlock_create(&test_writer);
-    sdwlock_free(lock);
+    LOCK_REGISTER_THIS_THREAD();
+    LOCK_DATATYPE_NAME * lock = LOCK_CREATE(&test_writer);
+    LOCK_FREE(lock);
     return 1;
-
 }
 
 int test_write_lock(){
     test_write_var = NULL;
-    sdwlock_register_this_thread();
-    SimpleDelayedWritesLock * lock = sdwlock_create(&test_writer);
-    sdwlock_write(lock, TO_VP(1));
-    sdwlock_free(lock);
+    LOCK_REGISTER_THIS_THREAD();
+    LOCK_DATATYPE_NAME * lock = LOCK_CREATE(&test_writer);
+    LOCK_WRITE(lock, TO_VP(1));
+    LOCK_FREE(lock);
     assert(test_write_var == TO_VP(1));
     return 1;
 }
@@ -36,15 +36,15 @@ int test_write_lock(){
 int test_write_lock_and_read_lock(){
     long incTo = 100;
     test_write_var = NULL;
-    SimpleDelayedWritesLock * lock = sdwlock_create(&test_writer);
-    sdwlock_register_this_thread();
+    LOCK_DATATYPE_NAME * lock = LOCK_CREATE(&test_writer);
+    LOCK_REGISTER_THIS_THREAD();
     for(long i = 1; i <= incTo; i++){
-        sdwlock_write(lock, TO_VP(1));
-        sdwlock_read_lock(lock);
+        LOCK_WRITE(lock, TO_VP(1));
+        LOCK_READ_LOCK(lock);
         assert(test_write_var == TO_VP(i));
-        sdwlock_read_unlock(lock);
+        LOCK_READ_UNLOCK(lock);
     }
-    sdwlock_free(lock);
+    LOCK_FREE(lock);
     assert(test_write_var == TO_VP(incTo));
     return 1;
 }
@@ -57,28 +57,28 @@ bool blocking_thread_child_has_written = false;
 
 void *blocking_thread_child(void *x){
     
-    SimpleDelayedWritesLock * lock = (SimpleDelayedWritesLock *) x;
-    sdwlock_register_this_thread();
+    LOCK_DATATYPE_NAME * lock = (LOCK_DATATYPE_NAME *) x;
+    LOCK_REGISTER_THIS_THREAD();
     if(read_lock_in_child){
-        sdwlock_read_lock(lock);
+        LOCK_READ_LOCK(lock);
     }else{
-        sdwlock_write_read_lock(lock);
+        LOCK_WRITE_READ_LOCK(lock);
     }
     blocking_thread_child_has_written = true;
     __sync_synchronize();
     if(read_lock_in_child){
-        sdwlock_read_unlock(lock);
+        LOCK_READ_UNLOCK(lock);
     }else{
-        sdwlock_write_read_unlock(lock);
+        LOCK_WRITE_READ_UNLOCK(lock);
     }
 
     pthread_exit(0); 
 }
 
 void *blocking_thread(void *x){
-    SimpleDelayedWritesLock * lock = (SimpleDelayedWritesLock *) x;
-    sdwlock_register_this_thread();
-    sdwlock_write_read_lock(lock);
+    LOCK_DATATYPE_NAME * lock = (LOCK_DATATYPE_NAME *) x;
+    LOCK_REGISTER_THIS_THREAD();
+    LOCK_WRITE_READ_LOCK(lock);
     pthread_t thread;
     pthread_create(&thread,NULL,&blocking_thread_child,lock);
 
@@ -86,7 +86,7 @@ void *blocking_thread(void *x){
 
     while(!ACCESS_ONCE(blocking_thread_unblock)){__sync_synchronize();}
 
-    sdwlock_write_read_unlock(lock);
+    LOCK_WRITE_READ_UNLOCK(lock);
 
     pthread_join(thread,NULL);
     
@@ -94,11 +94,11 @@ void *blocking_thread(void *x){
 }
 
 int test_read_write_lock_is_blocking_other_lock(){
-    sdwlock_register_this_thread();
+    LOCK_REGISTER_THIS_THREAD();
     for(int i = 0; i < 10; i ++){
         blocking_thread_unblock = false;
         blocking_thread_child_has_written = false;
-        SimpleDelayedWritesLock * lock = sdwlock_create(&test_writer);
+        LOCK_DATATYPE_NAME * lock = LOCK_CREATE(&test_writer);
         pthread_t thread;
         pthread_create(&thread,NULL,&blocking_thread,lock);
         __sync_synchronize();
@@ -107,7 +107,7 @@ int test_read_write_lock_is_blocking_other_lock(){
         __sync_synchronize();
         pthread_join(thread,NULL);
         assert(blocking_thread_child_has_written);
-        sdwlock_free(lock);
+        LOCK_FREE(lock);
     }
     return 1;
 }
@@ -131,7 +131,7 @@ double percentageRead = 0.8;
 
 typedef struct LockCounterImpl {
     unsigned short xsubi[3];
-    SimpleDelayedWritesLock * lock;
+    LOCK_DATATYPE_NAME * lock;
     int logicalWritesInFuture;
     char pad[128];
     int writesInFuture;
@@ -156,26 +156,26 @@ void mixed_read_write_test_writer(void * lock_counter){
 
 
 void *mixed_read_write_thread(void *x){
-    sdwlock_register_this_thread();
+    LOCK_REGISTER_THIS_THREAD();
     LockCounter * lc = (LockCounter *) x;
-    SimpleDelayedWritesLock * lock = lc->lock;
+    LOCK_DATATYPE_NAME * lock = lc->lock;
     for(int i = 0; i < numberOfOperationsPerThread; i++){
         if(erand48(lc->xsubi) > percentageRead){
             lc->pendingWrite = true;
-            sdwlock_write(lock, lc);
+            LOCK_WRITE(lock, lc);
             lc->logicalWritesInFuture = lc->logicalWritesInFuture + 1;
         }else{
-            sdwlock_read_lock(lock);
+            LOCK_READ_LOCK(lock);
             assert(!ACCESS_ONCE(lc->pendingWrite));
             assert(lc->logicalWritesInFuture==ACCESS_ONCE(lc->writesInFuture));
             int currentCount = ACCESS_ONCE(count);
             //usleep(100);
             assert(currentCount == ACCESS_ONCE(count));
-            sdwlock_read_unlock(lock);
+            LOCK_READ_UNLOCK(lock);
         }
     }
-    sdwlock_read_lock(lock);
-    sdwlock_read_unlock(lock);
+    LOCK_READ_LOCK(lock);
+    LOCK_READ_UNLOCK(lock);
     assert(ACCESS_ONCE(lc->writesInFuture) == lc->logicalWritesInFuture);
     
     pthread_exit(0); 
@@ -185,7 +185,7 @@ int test_parallel_mixed_read_write(double percentageReadParam){
     percentageRead = percentageReadParam;
     count = 0;
     pthread_t threads[NUMBER_OF_THREADS];
-    SimpleDelayedWritesLock * lock = sdwlock_create(&mixed_read_write_test_writer);
+    LOCK_DATATYPE_NAME * lock = LOCK_CREATE(&mixed_read_write_test_writer);
     for(int i = 0; i < NUMBER_OF_THREADS; i ++){
         LockCounter *lc = &lock_counters[i];
         lc->lock = lock;
@@ -205,7 +205,7 @@ int test_parallel_mixed_read_write(double percentageReadParam){
 
     assert(totalNumOfWrites == count);
 
-    sdwlock_free(lock);
+    LOCK_FREE(lock);
     return 1;
 }
 

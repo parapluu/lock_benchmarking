@@ -12,12 +12,8 @@ typedef struct NodeImpl {
     char pad1[64];
     CacheLinePaddedBool locked __attribute__((aligned(64)));
     char pad2[64];
-    CacheLinePaddedBool readSpinningEnabled __attribute__((aligned(64)));
-    CacheLinePaddedInt readSpinnerFlags[NUMBER_OF_READER_GROUPS] __attribute__((aligned(64)));
+    bool readLockIsWriteLock __attribute__((aligned(64)));
     char pad3[64];
-    bool readLockIsWriteLock;
-    bool readLockIsSpinningOnNode;
-    struct NodeImpl * readLockSpinningNode;
 } Node;
 
 typedef struct SimpleDelayedWritesLockImpl {

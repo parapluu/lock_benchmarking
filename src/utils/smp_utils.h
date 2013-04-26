@@ -1,6 +1,8 @@
 #ifndef SMP_UTILS_H
 #define SMP_UTILS_H
 
+#include <stdbool.h>
+
 //Make sure compiler does not optimize away memory access
 #define ACCESS_ONCE(x) (*(volatile typeof(x) *)&(x))
 
