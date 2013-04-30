@@ -18,8 +18,8 @@ Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
 }
 
 
-__thread Node myNode;
-__thread int myId;
+__thread Node myNode __attribute__((aligned(64)));
+__thread int myId __attribute__((aligned(64)));
 
 int myIdCounter = 0;
 
@@ -50,7 +50,7 @@ SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *)){
 
 void sdwlock_initialize(SimpleDelayedWritesLock * lock, void (*writer)(void *)){
     lock->writer = writer;
-    lock->endOfQueue = NULL;
+    lock->endOfQueue.value = NULL;
     for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
         lock->readLocks[i].value = 0;
     }
@@ -66,14 +66,14 @@ void sdwlock_register_this_thread(){
     Node * node = &myNode;
     myId = __sync_fetch_and_add(&myIdCounter, 1);
     node->locked.value = false;
-    node->next = NULL;
+    node->next.value = NULL;
     node->readLockIsWriteLock = false;
     mwqueue_initialize(&node->writeQueue);
 }
 
 void sdwlock_write(SimpleDelayedWritesLock *lock, void * writeInfo) {
     __sync_synchronize();
-    Node * currentNode = ACCESS_ONCE(lock->endOfQueue);
+    Node * currentNode = ACCESS_ONCE(lock->endOfQueue.value);
     if(currentNode == NULL || ! mwqueue_offer(&currentNode->writeQueue, writeInfo)){
         sdwlock_write_read_lock(lock);
         lock->writer(writeInfo);
@@ -83,11 +83,11 @@ void sdwlock_write(SimpleDelayedWritesLock *lock, void * writeInfo) {
 
 void sdwlock_write_read_lock(SimpleDelayedWritesLock *lock) {
     Node * node = &myNode;
-    Node * predecessor = get_and_set_node_ptr(&lock->endOfQueue, node);
+    Node * predecessor = get_and_set_node_ptr(&lock->endOfQueue.value, node);
     mwqueue_reset_fully_read(&node->writeQueue);
     if (predecessor != NULL) {
         node->locked.value = true;
-        predecessor->next = node;
+        predecessor->next.value = node;
         __sync_synchronize();
         //Wait
         while (ACCESS_ONCE(node->locked.value)) {
@@ -110,17 +110,17 @@ void flushWriteQueue(SimpleDelayedWritesLock * lock, MWQueue * writeQueue){
 void sdwlock_write_read_unlock(SimpleDelayedWritesLock * lock) {
     Node * node = &myNode;
     flushWriteQueue(lock, &node->writeQueue);
-    if (ACCESS_ONCE(node->next) == NULL) {
-        if (__sync_bool_compare_and_swap(&lock->endOfQueue, node, NULL)){
+    if (ACCESS_ONCE(node->next.value) == NULL) {
+        if (__sync_bool_compare_and_swap(&lock->endOfQueue.value, node, NULL)){
             return;
         }
         //wait
-        while (ACCESS_ONCE(node->next) == NULL) {
+        while (ACCESS_ONCE(node->next.value) == NULL) {
             __sync_synchronize();
         }
     }
-    node->next->locked.value = false;
-    node->next = NULL;
+    node->next.value->locked.value = false;
+    node->next.value = NULL;
     __sync_synchronize();
 }
 
@@ -133,9 +133,9 @@ void convertReadLockToWriteLock(SimpleDelayedWritesLock *lock, Node * node){
 void sdwlock_read_lock(SimpleDelayedWritesLock *lock) {
     Node * node = &myNode;
     __sync_synchronize();
-    if(ACCESS_ONCE(lock->endOfQueue) == NULL){
+    if(ACCESS_ONCE(lock->endOfQueue.value) == NULL){
         indicateReadEnter(lock);
-        if(ACCESS_ONCE(lock->endOfQueue) != NULL){
+        if(ACCESS_ONCE(lock->endOfQueue.value) != NULL){
             indicateReadExit(lock);
             convertReadLockToWriteLock(lock, node);
         }

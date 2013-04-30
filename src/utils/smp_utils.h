@@ -22,14 +22,14 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-typedef struct CacheLinePaddedBoolImpl {
+typedef union CacheLinePaddedBoolImpl {
     bool value;
-    char padding[64 - sizeof(bool)];
+    char padding[64];
 } CacheLinePaddedBool;
 
-typedef struct CacheLinePaddedIntImpl {
+typedef union CacheLinePaddedIntImpl {
     int value;
-    char padding[64 - sizeof(int)];
+    char padding[64];
 } CacheLinePaddedInt;
 
 

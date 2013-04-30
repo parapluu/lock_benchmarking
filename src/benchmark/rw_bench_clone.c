@@ -34,14 +34,14 @@ typedef struct BoolWrapperImpl{
 typedef struct LockWrapperImpl{
     char pad1[FALSE_SHARING_SECURITY];
     LOCK_DATATYPE_NAME value;
-    char pad2[sizeof(LOCK_DATATYPE_NAME) % 64 + FALSE_SHARING_SECURITY];
-} LookWrapper;
+    char pad2[sizeof(FALSE_SHARING_SECURITY)];
+} LockWrapper;
 
 //=======================
 //Benchmark mutable state (Important that they are all on separate cache lines)
 //=======================
 
-LookWrapper lock_wrapper __attribute__((aligned(64)));
+LockWrapper lock_wrapper __attribute__((aligned(64)));
 LOCK_DATATYPE_NAME * lock = &lock_wrapper.value;
 
 SeedWrapper write_d_rand_seed_wrapper __attribute__((aligned(64)));
@@ -223,7 +223,6 @@ void run_scaling_benchmark(int numOfThreadsArraySize,
                            int iterationsSpentInReadCriticalSectionParam,
                            int iterationsSpentInNonCriticalSectionParam,
                            char benchmark_identifier[]){
-
 
     char * file_name_buffer = malloc(4096);
     char file_name_format [] = "%s.dat";

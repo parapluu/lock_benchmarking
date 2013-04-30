@@ -5,25 +5,27 @@
 #ifndef SIMPLE_DELAYED_WRITERS_LOCK_H
 #define SIMPLE_DELAYED_WRITERS_LOCK_H
 
+struct NodeImpl;
 
+typedef union CacheLinePaddedNodePtrImpl {
+    struct NodeImpl * value;
+    char padding[64];
+} CacheLinePaddedNodePtr;
 
 typedef struct NodeImpl {
-    MWQueue writeQueue __attribute__((aligned(64)));
-    struct NodeImpl * next __attribute__((aligned(64)));
-    char pad1[64];
-    CacheLinePaddedBool locked __attribute__((aligned(64)));
-    char pad2[64];
-    bool readLockIsWriteLock __attribute__((aligned(64)));
-    char pad3[64];
+    MWQueue writeQueue;
+    CacheLinePaddedNodePtr next;
+    CacheLinePaddedBool locked;
+    bool readLockIsWriteLock;
+    char pad[64 - ((sizeof(bool)) % 64)];
 } Node;
 
 typedef struct SimpleDelayedWritesLockImpl {
     char pad1[64];
-    void (*writer)(void *) __attribute__((aligned(64)));
-    char pad2[64];
-    Node * endOfQueue __attribute__((aligned(64)));
-    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS] __attribute__((aligned(64)));
-    char pad3[64];
+    void (*writer)(void *);
+    char pad2[64 - sizeof(void (*)(void*)) % 64];
+    CacheLinePaddedNodePtr endOfQueue;
+    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS];
 } SimpleDelayedWritesLock;
 
 

@@ -8,14 +8,14 @@
 typedef void * entry;
 typedef struct MWQImpl {
     char padd1[64];
-    CacheLinePaddedInt elementCount __attribute__((aligned(64)));
-    entry elements[MWQ_CAPACITY] __attribute__((aligned(64)));
-    char padd2[64];
+    CacheLinePaddedInt elementCount;
+    entry elements[MWQ_CAPACITY];    
+    char padd2[64 - ((sizeof(entry)*MWQ_CAPACITY) % 64)];
     int readCurrentElementIndex;
     int numOfElementsToRead;
     bool readStarted;
     bool closed;
-    char padd3[64];
+    char padd3[64 - ((sizeof(int)*2 + sizeof(bool)*2) % 64)];
 } MWQueue;
 
 
