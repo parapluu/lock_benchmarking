@@ -123,8 +123,8 @@ int test_read_write_lock_is_blocking_other_read_lock(){
 }
 
 
-int numberOfOperationsPerThread = 5000;
-#define NUMBER_OF_THREADS 6
+int numberOfOperationsPerThread = 1000000;
+#define NUMBER_OF_THREADS 2
 int count = 0;
 double percentageRead = 0.8;
 

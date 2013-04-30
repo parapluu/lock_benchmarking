@@ -2,14 +2,31 @@
 #define SUPPORT_MANY_LOCK_TYPES_H
 
 #ifdef LOCK_TYPE_SimpleDelayedWritesLock
+//***********************************
+//SimpleDelayedWritesLock
+//***********************************
+#include "simple_delayed_writers_lock.h"
 
 #define LOCK_DATATYPE_NAME SimpleDelayedWritesLock
 #define LOCK_FUN_PREFIX sdwlock
 
 #elif defined (LOCK_TYPE_AllEqualRDXLock)
+//***********************************
+//AllEqualRDXLock
+//***********************************
+#include "all_equal_rdx_lock.h"
 
 #define LOCK_DATATYPE_NAME AllEqualRDXLock
 #define LOCK_FUN_PREFIX aerlock
+
+#elif defined (LOCK_TYPE_MCSLock)
+//***********************************
+//MCSLock
+//***********************************
+#include "mcs_lock.h"
+
+#define LOCK_DATATYPE_NAME MCSLock
+#define LOCK_FUN_PREFIX mcslock
 
 #else
 
@@ -20,11 +37,10 @@
 
 
 #ifdef LOCK_TYPE_SimpleDelayedWritesLock
-#include "simple_delayed_writers_lock.h"
-#elif defined (LOCK_TYPE_AllEqualRDXLock)
-#include "all_equal_rdx_lock.h"
-#endif
 
+#elif defined (LOCK_TYPE_AllEqualRDXLock)
+
+#endif
 
 
 #ifdef LOCK_FUN_PREFIX
