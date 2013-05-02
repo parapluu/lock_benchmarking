@@ -50,7 +50,7 @@ bin/rw_bench_clone_sdw: bin/multi_writers_queue.o bin/simple_delayed_writers_loc
 	$(CC) -o bin/rw_bench_clone_sdw bin/multi_writers_queue.o bin/simple_delayed_writers_lock.o bin/rw_bench_clone_sdw.o $(LIBS) $(CFLAGS)
 
 bin/rw_bench_clone_aer: bin/multi_writers_queue.o bin/all_equal_rdx_lock.o  bin/rw_bench_clone_aer.o
-	$(CC) -o bin/rw_bench_clone_aer bin/all_equal_rdx_lock.o bin/rw_bench_clone_aer.o $(LIBS) $(CFLAGS)
+	$(CC) -o bin/rw_bench_clone_aer bin/multi_writers_queue.o bin/all_equal_rdx_lock.o bin/rw_bench_clone_aer.o $(LIBS) $(CFLAGS)
 
 bin/rw_bench_clone_mcs: bin/mcs_lock.o  bin/rw_bench_clone_mcs.o
 	$(CC) -o bin/rw_bench_clone_mcs bin/multi_writers_queue.o bin/mcs_lock.o bin/rw_bench_clone_mcs.o $(LIBS) $(CFLAGS)
@@ -99,7 +99,7 @@ bin/rw_bench_clone_mcs.o: $(RW_BENCH_SRC_DEPS) src/lock/mcs_lock.h
 	$(CC) $(CFLAGS) -DLOCK_TYPE_MCSLock -c src/benchmark/rw_bench_clone.c ; \
 	mv rw_bench_clone.o bin/rw_bench_clone_mcs.o
 
-bin/rw_bench_clone_mcs.o: $(RW_BENCH_SRC_DEPS) src/lock/drmcs_lock.h
+bin/rw_bench_clone_drmcs.o: $(RW_BENCH_SRC_DEPS) src/lock/drmcs_lock.h
 	$(CC) $(CFLAGS) -DLOCK_TYPE_DRMCSLock -c src/benchmark/rw_bench_clone.c ; \
 	mv rw_bench_clone.o bin/rw_bench_clone_drmcs.o
 
@@ -196,6 +196,6 @@ run_80_access_skiplist_percent_reads_benchmark: bin/mixed_ops_benchmark_access_s
 	./src/benchmark/run_mixed_ops_bench_access_skiplist.sh $$FILE_NAME_PREFIX 0.0 1000000 1 1 $(BENCHMARK_NUM_OF_THREADS)
 
 clean:
-	rm -f bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/*.o
+	rm -f bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/rw_bench_clone_drmcs  bin/rw_bench_clone_mcs  bin/test_drmcs_lock  bin/test_mcs_lock bin/*.o
 
 check-syntax: test_multi_writers_queue
