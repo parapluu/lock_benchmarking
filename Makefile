@@ -2,7 +2,7 @@ NUMER_OF_READER_GROUPS=8
 
 GIT_COMMIT = `date +'%y.%m.%d_%H.%M.%S'`_`git rev-parse HEAD`
 
-BENCHMARK_NUM_OF_THREADS = 1 2
+BENCHMARK_NUM_OF_THREADS = 1 2 4 8
 CC = gcc
 CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O3 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS) 
 TEST_MULTI_WRITERS_QUEUE_OBJECTS = bin/multi_writers_queue.o bin/test_multi_writers_queue.o
@@ -24,7 +24,7 @@ RW_BENCH_SRC_DEPS = src/benchmark/rw_bench_clone.c \
 
 LIBS =
 
-all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs
+all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs bin/test_drmcs_lock bin/rw_bench_clone_drmcs
 
 #Executables
 
@@ -40,6 +40,9 @@ bin/test_all_equal_rdx_lock: $(TEST_LOCK_OBJECTS) bin/test_all_equal_rdx_lock.o 
 bin/test_mcs_lock: $(TEST_LOCK_OBJECTS) bin/test_mcs_lock.o bin/mcs_lock.o
 	$(CC) -o bin/test_mcs_lock $(TEST_LOCK_OBJECTS) bin/test_mcs_lock.o bin/mcs_lock.o $(LIBS) $(CFLAGS)
 
+bin/test_drmcs_lock: $(TEST_LOCK_OBJECTS) bin/test_drmcs_lock.o bin/mcs_lock.o bin/drmcs_lock.o
+	$(CC) -o bin/test_drmcs_lock $(TEST_LOCK_OBJECTS) bin/test_drmcs_lock.o bin/drmcs_lock.o bin/mcs_lock.o $(LIBS) $(CFLAGS)
+
 bin/mixed_ops_benchmark: $(BENCHMARK_OBJECTS)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark $(BENCHMARK_OBJECTS) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
 
@@ -47,10 +50,13 @@ bin/rw_bench_clone_sdw: bin/multi_writers_queue.o bin/simple_delayed_writers_loc
 	$(CC) -o bin/rw_bench_clone_sdw bin/multi_writers_queue.o bin/simple_delayed_writers_lock.o bin/rw_bench_clone_sdw.o $(LIBS) $(CFLAGS)
 
 bin/rw_bench_clone_aer: bin/multi_writers_queue.o bin/all_equal_rdx_lock.o  bin/rw_bench_clone_aer.o
-	$(CC) -o bin/rw_bench_clone_aer bin/multi_writers_queue.o bin/all_equal_rdx_lock.o bin/rw_bench_clone_aer.o $(LIBS) $(CFLAGS)
+	$(CC) -o bin/rw_bench_clone_aer bin/all_equal_rdx_lock.o bin/rw_bench_clone_aer.o $(LIBS) $(CFLAGS)
 
-bin/rw_bench_clone_mcs: bin/multi_writers_queue.o bin/mcs_lock.o  bin/rw_bench_clone_mcs.o
+bin/rw_bench_clone_mcs: bin/mcs_lock.o  bin/rw_bench_clone_mcs.o
 	$(CC) -o bin/rw_bench_clone_mcs bin/multi_writers_queue.o bin/mcs_lock.o bin/rw_bench_clone_mcs.o $(LIBS) $(CFLAGS)
+
+bin/rw_bench_clone_drmcs: bin/drmcs_lock.o bin/mcs_lock.o  bin/rw_bench_clone_drmcs.o
+	$(CC) -o bin/rw_bench_clone_drmcs  bin/mcs_lock.o bin/drmcs_lock.o bin/rw_bench_clone_drmcs.o $(LIBS) $(CFLAGS)
 
 bin/mixed_ops_benchmark_access_skiplist: $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark_access_skiplist $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
@@ -68,6 +74,10 @@ bin/test_all_equal_rdx_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 bin/test_mcs_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 	$(CC) $(CFLAGS) -DLOCK_TYPE_MCSLock -c src/tests/test_rdx_lock.c ; \
 	mv test_rdx_lock.o bin/test_mcs_lock.o
+
+bin/test_drmcs_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
+	$(CC) $(CFLAGS) -DLOCK_TYPE_DRMCSLock -c src/tests/test_rdx_lock.c ; \
+	mv test_rdx_lock.o bin/test_drmcs_lock.o
 
 bin/test_multi_writers_queue.o: $(TEST_SRC_DEPS) src/tests/test_multi_writers_queue.c
 	$(CC) $(CFLAGS) -c src/tests/test_multi_writers_queue.c ; \
@@ -89,6 +99,10 @@ bin/rw_bench_clone_mcs.o: $(RW_BENCH_SRC_DEPS) src/lock/mcs_lock.h
 	$(CC) $(CFLAGS) -DLOCK_TYPE_MCSLock -c src/benchmark/rw_bench_clone.c ; \
 	mv rw_bench_clone.o bin/rw_bench_clone_mcs.o
 
+bin/rw_bench_clone_mcs.o: $(RW_BENCH_SRC_DEPS) src/lock/drmcs_lock.h
+	$(CC) $(CFLAGS) -DLOCK_TYPE_DRMCSLock -c src/benchmark/rw_bench_clone.c ; \
+	mv rw_bench_clone.o bin/rw_bench_clone_drmcs.o
+
 bin/benchmark_functions_access_skiplist.o: src/benchmark/benchmark_functions.c src/benchmark/benchmark_functions.h src/lock/simple_delayed_writers_lock.h src/utils/smp_utils.h
 	$(CC) $(CFLAGS) -DACCESS_SKIPLIST -c src/benchmark/benchmark_functions.c ; \
 	mv benchmark_functions.o bin/benchmark_functions_access_skiplist.o
@@ -107,6 +121,10 @@ bin/all_equal_rdx_lock.o: $(LOCK_SRC_DEPS) src/lock/all_equal_rdx_lock.c src/loc
 
 bin/mcs_lock.o: $(LOCK_SRC_DEPS) src/lock/mcs_lock.c src/lock/mcs_lock.h
 	$(CC) $(CFLAGS) -c src/lock/mcs_lock.c ; \
+	mv *.o bin/
+
+bin/drmcs_lock.o: $(LOCK_SRC_DEPS) src/lock/drmcs_lock.c src/lock/drmcs_lock.h
+	$(CC) $(CFLAGS) -c src/lock/drmcs_lock.c ; \
 	mv *.o bin/
 
 bin/multi_writers_queue.o: src/datastructures/multi_writers_queue.c src/datastructures/multi_writers_queue.h src/utils/smp_utils.h
@@ -148,6 +166,9 @@ run_all_rw_bench_aer_benchmarks: bin/rw_bench_clone_aer
 
 run_all_rw_bench_mcs_benchmarks: bin/rw_bench_clone_mcs
 	./src/benchmark/run_all_rw_bench_clone.sh mcs $(BENCHMARK_NUM_OF_THREADS)
+
+run_all_rw_bench_drmcs_benchmarks: bin/rw_bench_clone_drmcs
+	./src/benchmark/run_all_rw_bench_clone.sh drmcs $(BENCHMARK_NUM_OF_THREADS)
 
 run_writes_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/writes_benchmark_$(GIT_COMMIT) ; \

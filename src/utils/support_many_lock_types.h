@@ -28,20 +28,21 @@
 #define LOCK_DATATYPE_NAME MCSLock
 #define LOCK_FUN_PREFIX mcslock
 
+#elif defined (LOCK_TYPE_DRMCSLock)
+//***********************************
+//DRMCSLock
+//***********************************
+#include "drmcs_lock.h"
+
+#define LOCK_DATATYPE_NAME DRMCSLock
+#define LOCK_FUN_PREFIX drmcslock
+
 #else
 
 #define LOCK_DATATYPE_NAME NoLockDatatypeSpecified
 #define LOCK_FUN_PREFIX no_such_lock_type_prefix
 
 #endif
-
-
-#ifdef LOCK_TYPE_SimpleDelayedWritesLock
-
-#elif defined (LOCK_TYPE_AllEqualRDXLock)
-
-#endif
-
 
 #ifdef LOCK_FUN_PREFIX
 

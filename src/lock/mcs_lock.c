@@ -65,6 +65,7 @@ void mcslock_write_read_unlock(MCSLock * lock) {
     MCSNode * node = &myMCSNode;
     if (ACCESS_ONCE(node->next.value) == NULL) {
         if (__sync_bool_compare_and_swap(&lock->endOfQueue.value, node, NULL)){
+            //printf("NULL\n");
             return;
         }
         //wait
@@ -72,6 +73,7 @@ void mcslock_write_read_unlock(MCSLock * lock) {
             __sync_synchronize();
         }
     }
+    //printf("NOT\n");
     node->next.value->locked.value = false;
     node->next.value = NULL;
     __sync_synchronize();

@@ -16,5 +16,7 @@ rw_bench_clone_sdw
 test_all_equal_rdx_lock
 test_mcs_lock
 rw_bench_clone_mcs
+rw_bench_clone_drmcs
+bin/test_drmcs_lock
 TAGS
 core
