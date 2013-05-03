@@ -37,6 +37,24 @@
 #define LOCK_DATATYPE_NAME DRMCSLock
 #define LOCK_FUN_PREFIX drmcslock
 
+#elif defined (LOCK_TYPE_TicketLock)
+//***********************************
+//TicketLock
+//***********************************
+#include "ticket_lock.h"
+
+#define LOCK_DATATYPE_NAME TicketLock
+#define LOCK_FUN_PREFIX ticketlock
+
+#elif defined (LOCK_TYPE_ATicketLock)
+//***********************************
+//Array TicketLock
+//***********************************
+#include "aticket_lock.h"
+
+#define LOCK_DATATYPE_NAME ATicketLock
+#define LOCK_FUN_PREFIX aticketlock
+
 #else
 
 #define LOCK_DATATYPE_NAME NoLockDatatypeSpecified

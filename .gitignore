@@ -17,6 +17,10 @@ test_all_equal_rdx_lock
 test_mcs_lock
 rw_bench_clone_mcs
 rw_bench_clone_drmcs
-bin/test_drmcs_lock
+test_drmcs_lock
+rw_bench_clone_aticket
+rw_bench_clone_ticket
+test_aticket_lock
+test_ticket_lock
 TAGS
 core

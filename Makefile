@@ -24,7 +24,7 @@ RW_BENCH_SRC_DEPS = src/benchmark/rw_bench_clone.c \
 
 LIBS =
 
-all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs bin/test_drmcs_lock bin/rw_bench_clone_drmcs
+all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs bin/test_drmcs_lock bin/rw_bench_clone_drmcs bin/test_ticket_lock bin/rw_bench_clone_ticket bin/test_aticket_lock bin/rw_bench_clone_aticket
 
 #Executables
 
@@ -43,6 +43,12 @@ bin/test_mcs_lock: $(TEST_LOCK_OBJECTS) bin/test_mcs_lock.o bin/mcs_lock.o
 bin/test_drmcs_lock: $(TEST_LOCK_OBJECTS) bin/test_drmcs_lock.o bin/mcs_lock.o bin/drmcs_lock.o
 	$(CC) -o bin/test_drmcs_lock $(TEST_LOCK_OBJECTS) bin/test_drmcs_lock.o bin/drmcs_lock.o bin/mcs_lock.o $(LIBS) $(CFLAGS)
 
+bin/test_ticket_lock: $(TEST_LOCK_OBJECTS) bin/test_ticket_lock.o bin/ticket_lock.o bin/ticket_lock.o
+	$(CC) -o bin/test_ticket_lock $(TEST_LOCK_OBJECTS) bin/test_ticket_lock.o bin/ticket_lock.o$(LIBS) $(CFLAGS)
+
+bin/test_aticket_lock: $(TEST_LOCK_OBJECTS) bin/test_aticket_lock.o bin/aticket_lock.o bin/aticket_lock.o
+	$(CC) -o bin/test_aticket_lock $(TEST_LOCK_OBJECTS) bin/test_aticket_lock.o bin/aticket_lock.o$(LIBS) $(CFLAGS)
+
 bin/mixed_ops_benchmark: $(BENCHMARK_OBJECTS)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark $(BENCHMARK_OBJECTS) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
 
@@ -57,6 +63,12 @@ bin/rw_bench_clone_mcs: bin/mcs_lock.o  bin/rw_bench_clone_mcs.o
 
 bin/rw_bench_clone_drmcs: bin/drmcs_lock.o bin/mcs_lock.o  bin/rw_bench_clone_drmcs.o
 	$(CC) -o bin/rw_bench_clone_drmcs  bin/mcs_lock.o bin/drmcs_lock.o bin/rw_bench_clone_drmcs.o $(LIBS) $(CFLAGS)
+
+bin/rw_bench_clone_ticket: bin/ticket_lock.o bin/rw_bench_clone_ticket.o
+	$(CC) -o bin/rw_bench_clone_ticket bin/ticket_lock.o bin/rw_bench_clone_ticket.o $(LIBS) $(CFLAGS)
+
+bin/rw_bench_clone_aticket: bin/aticket_lock.o bin/rw_bench_clone_aticket.o
+	$(CC) -o bin/rw_bench_clone_aticket bin/aticket_lock.o bin/rw_bench_clone_aticket.o $(LIBS) $(CFLAGS)
 
 bin/mixed_ops_benchmark_access_skiplist: $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark_access_skiplist $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
@@ -78,6 +90,14 @@ bin/test_mcs_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 bin/test_drmcs_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 	$(CC) $(CFLAGS) -DLOCK_TYPE_DRMCSLock -c src/tests/test_rdx_lock.c ; \
 	mv test_rdx_lock.o bin/test_drmcs_lock.o
+
+bin/test_ticket_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
+	$(CC) $(CFLAGS) -DLOCK_TYPE_TicketLock -c src/tests/test_rdx_lock.c ; \
+	mv test_rdx_lock.o bin/test_ticket_lock.o
+
+bin/test_aticket_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
+	$(CC) $(CFLAGS) -DLOCK_TYPE_ATicketLock -c src/tests/test_rdx_lock.c ; \
+	mv test_rdx_lock.o bin/test_aticket_lock.o
 
 bin/test_multi_writers_queue.o: $(TEST_SRC_DEPS) src/tests/test_multi_writers_queue.c
 	$(CC) $(CFLAGS) -c src/tests/test_multi_writers_queue.c ; \
@@ -103,6 +123,14 @@ bin/rw_bench_clone_drmcs.o: $(RW_BENCH_SRC_DEPS) src/lock/drmcs_lock.h
 	$(CC) $(CFLAGS) -DLOCK_TYPE_DRMCSLock -c src/benchmark/rw_bench_clone.c ; \
 	mv rw_bench_clone.o bin/rw_bench_clone_drmcs.o
 
+bin/rw_bench_clone_ticket.o: $(RW_BENCH_SRC_DEPS) src/lock/ticket_lock.h
+	$(CC) $(CFLAGS) -DLOCK_TYPE_TicketLock -c src/benchmark/rw_bench_clone.c ; \
+	mv rw_bench_clone.o bin/rw_bench_clone_ticket.o
+
+bin/rw_bench_clone_aticket.o: $(RW_BENCH_SRC_DEPS) src/lock/aticket_lock.h
+	$(CC) $(CFLAGS) -DLOCK_TYPE_ATicketLock -c src/benchmark/rw_bench_clone.c ; \
+	mv rw_bench_clone.o bin/rw_bench_clone_aticket.o
+
 bin/benchmark_functions_access_skiplist.o: src/benchmark/benchmark_functions.c src/benchmark/benchmark_functions.h src/lock/simple_delayed_writers_lock.h src/utils/smp_utils.h
 	$(CC) $(CFLAGS) -DACCESS_SKIPLIST -c src/benchmark/benchmark_functions.c ; \
 	mv benchmark_functions.o bin/benchmark_functions_access_skiplist.o
@@ -125,6 +153,14 @@ bin/mcs_lock.o: $(LOCK_SRC_DEPS) src/lock/mcs_lock.c src/lock/mcs_lock.h
 
 bin/drmcs_lock.o: $(LOCK_SRC_DEPS) src/lock/drmcs_lock.c src/lock/drmcs_lock.h
 	$(CC) $(CFLAGS) -c src/lock/drmcs_lock.c ; \
+	mv *.o bin/
+
+bin/ticket_lock.o: $(LOCK_SRC_DEPS) src/lock/ticket_lock.c src/lock/ticket_lock.h
+	$(CC) $(CFLAGS) -c src/lock/ticket_lock.c ; \
+	mv *.o bin/
+
+bin/aticket_lock.o: $(LOCK_SRC_DEPS) src/lock/aticket_lock.c src/lock/aticket_lock.h
+	$(CC) $(CFLAGS) -c src/lock/aticket_lock.c ; \
 	mv *.o bin/
 
 bin/multi_writers_queue.o: src/datastructures/multi_writers_queue.c src/datastructures/multi_writers_queue.h src/utils/smp_utils.h
@@ -170,6 +206,12 @@ run_all_rw_bench_mcs_benchmarks: bin/rw_bench_clone_mcs
 run_all_rw_bench_drmcs_benchmarks: bin/rw_bench_clone_drmcs
 	./src/benchmark/run_all_rw_bench_clone.sh drmcs $(BENCHMARK_NUM_OF_THREADS)
 
+run_all_rw_bench_ticket_benchmarks: bin/rw_bench_clone_ticket
+	./src/benchmark/run_all_rw_bench_clone.sh ticket $(BENCHMARK_NUM_OF_THREADS)
+
+run_all_rw_bench_aticket_benchmarks: bin/rw_bench_clone_aticket
+	./src/benchmark/run_all_rw_bench_clone.sh aticket $(BENCHMARK_NUM_OF_THREADS)
+
 run_writes_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/writes_benchmark_$(GIT_COMMIT) ; \
 	./src/benchmark/run_mixed_ops_bench.sh $$FILE_NAME_PREFIX 0.0 1000000 1000 1000 $(BENCHMARK_NUM_OF_THREADS)
@@ -196,6 +238,6 @@ run_80_access_skiplist_percent_reads_benchmark: bin/mixed_ops_benchmark_access_s
 	./src/benchmark/run_mixed_ops_bench_access_skiplist.sh $$FILE_NAME_PREFIX 0.0 1000000 1 1 $(BENCHMARK_NUM_OF_THREADS)
 
 clean:
-	rm -f bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/rw_bench_clone_drmcs  bin/rw_bench_clone_mcs  bin/test_drmcs_lock  bin/test_mcs_lock bin/*.o
+	rm -f  bin/*
 
 check-syntax: test_multi_writers_queue
