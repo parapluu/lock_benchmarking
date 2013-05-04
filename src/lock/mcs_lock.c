@@ -47,25 +47,31 @@ void mcslock_write(MCSLock *lock, void * writeInfo) {
     
 }
 
-void mcslock_write_read_lock(MCSLock *lock) {
+//Returns true if it is taken over from another writer and false otherwise
+bool mcslock_write_read_lock(MCSLock *lock) {
     MCSNode * node = &myMCSNode;
+    node->next.value = NULL;
     MCSNode * predecessor = get_and_set_node_ptr(&lock->endOfQueue.value, node);
     if (predecessor != NULL) {
         node->locked.value = true;
+        __sync_synchronize();
         predecessor->next.value = node;
         __sync_synchronize();
         //Wait
         while (ACCESS_ONCE(node->locked.value)) {
             __sync_synchronize();
         }
+        return true;
+    }else{
+        return false;
     }
 }
 
 void mcslock_write_read_unlock(MCSLock * lock) {
     MCSNode * node = &myMCSNode;
+    __sync_synchronize();
     if (ACCESS_ONCE(node->next.value) == NULL) {
         if (__sync_bool_compare_and_swap(&lock->endOfQueue.value, node, NULL)){
-            //printf("NULL\n");
             return;
         }
         //wait
@@ -73,9 +79,7 @@ void mcslock_write_read_unlock(MCSLock * lock) {
             __sync_synchronize();
         }
     }
-    //printf("NOT\n");
     node->next.value->locked.value = false;
-    node->next.value = NULL;
     __sync_synchronize();
 }
 

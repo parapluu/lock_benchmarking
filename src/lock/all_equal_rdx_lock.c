@@ -146,11 +146,13 @@ void aerlock_write(AllEqualRDXLock *lock, void * writeInfo) {
 
 void aerlock_write_read_lock(AllEqualRDXLock *lock) {
     Node * node = &myNode;
+    node->next.value = NULL;
     Node * predecessor = get_and_set_node_ptr(&lock->endOfQueue.value, node);
     node->readSpinningEnabled.value = true;//mb in next statement
     mwqueue_reset_fully_read(&node->writeQueue);
     if (predecessor != NULL) {
         node->locked.value = true;
+        __sync_synchronize();
         predecessor->next.value = node;
         __sync_synchronize();
         //Wait
@@ -185,7 +187,6 @@ void aerlock_write_read_unlock(AllEqualRDXLock * lock) {
         }
     }
     node->next.value->locked.value = false;
-    node->next.value = NULL;
     __sync_synchronize();
 }
 

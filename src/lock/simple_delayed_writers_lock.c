@@ -83,10 +83,12 @@ void sdwlock_write(SimpleDelayedWritesLock *lock, void * writeInfo) {
 
 void sdwlock_write_read_lock(SimpleDelayedWritesLock *lock) {
     Node * node = &myNode;
+    node->next.value = NULL;
     Node * predecessor = get_and_set_node_ptr(&lock->endOfQueue.value, node);
     mwqueue_reset_fully_read(&node->writeQueue);
     if (predecessor != NULL) {
         node->locked.value = true;
+        __sync_synchronize();
         predecessor->next.value = node;
         __sync_synchronize();
         //Wait
@@ -120,7 +122,6 @@ void sdwlock_write_read_unlock(SimpleDelayedWritesLock * lock) {
         }
     }
     node->next.value->locked.value = false;
-    node->next.value = NULL;
     __sync_synchronize();
 }
 

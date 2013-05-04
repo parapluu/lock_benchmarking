@@ -32,7 +32,7 @@ void mcslock_free(MCSLock * lock);
 void mcslock_initialize(MCSLock * lock, void (*writer)(void *));
 void mcslock_register_this_thread();
 void mcslock_write(MCSLock *lock, void * writeInfo);
-void mcslock_write_read_lock(MCSLock *lock);
+bool mcslock_write_read_lock(MCSLock *lock);
 void mcslock_write_read_unlock(MCSLock * lock);
 void mcslock_read_lock(MCSLock *lock);
 void mcslock_read_unlock(MCSLock *lock);

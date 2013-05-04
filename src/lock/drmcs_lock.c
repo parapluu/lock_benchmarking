@@ -34,7 +34,6 @@ void waitUntilAllReadersAreGone(DRMCSLock * lock){
 
 inline
 bool isWriteLocked(DRMCSLock * lock){
-    //printf("is write locked%d \n",lock->lock.endOfQueue.value != NULL);    
     return ACCESS_ONCE(lock->lock.endOfQueue.value) != NULL;
 }
  
@@ -70,11 +69,12 @@ void drmcslock_write(DRMCSLock *lock, void * writeInfo) {
 }
 
 void drmcslock_write_read_lock(DRMCSLock *lock) {
-    while(lock->writeBarrier.value){
+    while(ACCESS_ONCE(lock->writeBarrier.value)){
         __sync_synchronize();
     }
-    mcslock_write_read_lock(&lock->lock);
-    waitUntilAllReadersAreGone(lock);
+    if(!mcslock_write_read_lock(&lock->lock)){
+        waitUntilAllReadersAreGone(lock);
+    }
 }
 
 void drmcslock_write_read_unlock(DRMCSLock * lock) {
