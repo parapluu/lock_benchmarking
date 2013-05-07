@@ -20,6 +20,8 @@ rw_bench_clone_drmcs
 test_drmcs_lock
 rw_bench_clone_aticket
 rw_bench_clone_ticket
+rw_bench_clone_cohort
+bin/test_cohort_lock
 test_aticket_lock
 test_ticket_lock
 TAGS

@@ -2,9 +2,11 @@ NUMER_OF_READER_GROUPS=8
 
 GIT_COMMIT = `date +'%y.%m.%d_%H.%M.%S'`_`git rev-parse HEAD`
 
+NUMA_INFO = `./src/lock/extract_numa_structure.py`
+
 BENCHMARK_NUM_OF_THREADS = 1 2 4 8
 CC = gcc
-CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O3 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS) 
+CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O1 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS) 
 TEST_MULTI_WRITERS_QUEUE_OBJECTS = bin/multi_writers_queue.o bin/test_multi_writers_queue.o
 
 TEST_LOCK_OBJECTS = bin/multi_writers_queue.o
@@ -24,7 +26,7 @@ RW_BENCH_SRC_DEPS = src/benchmark/rw_bench_clone.c \
 
 LIBS =
 
-all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs bin/test_drmcs_lock bin/rw_bench_clone_drmcs bin/test_ticket_lock bin/rw_bench_clone_ticket bin/test_aticket_lock bin/rw_bench_clone_aticket
+all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs bin/test_drmcs_lock bin/rw_bench_clone_drmcs bin/test_ticket_lock bin/rw_bench_clone_ticket bin/test_aticket_lock bin/rw_bench_clone_aticket bin/test_cohort_lock bin/rw_bench_clone_cohort
 
 #Executables
 
@@ -47,7 +49,10 @@ bin/test_ticket_lock: $(TEST_LOCK_OBJECTS) bin/test_ticket_lock.o bin/ticket_loc
 	$(CC) -o bin/test_ticket_lock $(TEST_LOCK_OBJECTS) bin/test_ticket_lock.o bin/ticket_lock.o$(LIBS) $(CFLAGS)
 
 bin/test_aticket_lock: $(TEST_LOCK_OBJECTS) bin/test_aticket_lock.o bin/aticket_lock.o bin/aticket_lock.o
-	$(CC) -o bin/test_aticket_lock $(TEST_LOCK_OBJECTS) bin/test_aticket_lock.o bin/aticket_lock.o$(LIBS) $(CFLAGS)
+	$(CC) -o bin/test_aticket_lock $(TEST_LOCK_OBJECTS) bin/test_aticket_lock.o bin/aticket_lock.o $(LIBS) $(CFLAGS)
+
+bin/test_cohort_lock: $(TEST_LOCK_OBJECTS) bin/test_cohort_lock.o bin/cohort_lock.o bin/aticket_lock.o bin/ticket_lock.o
+	$(CC) -o bin/test_cohort_lock $(TEST_LOCK_OBJECTS) bin/test_cohort_lock.o bin/cohort_lock.o bin/aticket_lock.o bin/ticket_lock.o $(LIBS) $(CFLAGS)
 
 bin/mixed_ops_benchmark: $(BENCHMARK_OBJECTS)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark $(BENCHMARK_OBJECTS) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
@@ -69,6 +74,9 @@ bin/rw_bench_clone_ticket: bin/ticket_lock.o bin/rw_bench_clone_ticket.o
 
 bin/rw_bench_clone_aticket: bin/aticket_lock.o bin/rw_bench_clone_aticket.o
 	$(CC) -o bin/rw_bench_clone_aticket bin/aticket_lock.o bin/rw_bench_clone_aticket.o $(LIBS) $(CFLAGS)
+
+bin/rw_bench_clone_cohort: bin/cohort_lock.o bin/aticket_lock.o bin/ticket_lock.o bin/rw_bench_clone_cohort.o
+	$(CC) -o bin/rw_bench_clone_cohort bin/cohort_lock.o bin/aticket_lock.o bin/ticket_lock.o bin/rw_bench_clone_cohort.o $(LIBS) $(CFLAGS)
 
 bin/mixed_ops_benchmark_access_skiplist: $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST)  bin/mixed_ops_benchmark.o
 	$(CC) -o bin/mixed_ops_benchmark_access_skiplist $(BENCHMARK_OBJECTS_ACCESS_SKIPLIST) bin/mixed_ops_benchmark.o $(LIBS) $(CFLAGS)
@@ -98,6 +106,10 @@ bin/test_ticket_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 bin/test_aticket_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 	$(CC) $(CFLAGS) -DLOCK_TYPE_ATicketLock -c src/tests/test_rdx_lock.c ; \
 	mv test_rdx_lock.o bin/test_aticket_lock.o
+
+bin/test_cohort_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
+	$(CC) $(CFLAGS) -DNUMBER_OF_NUMA_NODES=6 -DLOCK_TYPE_CohortLock -c src/tests/test_rdx_lock.c ; \
+	mv test_rdx_lock.o bin/test_cohort_lock.o
 
 bin/test_multi_writers_queue.o: $(TEST_SRC_DEPS) src/tests/test_multi_writers_queue.c
 	$(CC) $(CFLAGS) -c src/tests/test_multi_writers_queue.c ; \
@@ -131,6 +143,10 @@ bin/rw_bench_clone_aticket.o: $(RW_BENCH_SRC_DEPS) src/lock/aticket_lock.h
 	$(CC) $(CFLAGS) -DLOCK_TYPE_ATicketLock -c src/benchmark/rw_bench_clone.c ; \
 	mv rw_bench_clone.o bin/rw_bench_clone_aticket.o
 
+bin/rw_bench_clone_cohort.o: $(RW_BENCH_SRC_DEPS) src/lock/cohort_lock.h
+	$(CC) $(CFLAGS) -DNUMBER_OF_NUMA_NODES=6 -DLOCK_TYPE_CohortLock -c src/benchmark/rw_bench_clone.c ; \
+	mv rw_bench_clone.o bin/rw_bench_clone_cohort.o
+
 bin/benchmark_functions_access_skiplist.o: src/benchmark/benchmark_functions.c src/benchmark/benchmark_functions.h src/lock/simple_delayed_writers_lock.h src/utils/smp_utils.h
 	$(CC) $(CFLAGS) -DACCESS_SKIPLIST -c src/benchmark/benchmark_functions.c ; \
 	mv benchmark_functions.o bin/benchmark_functions_access_skiplist.o
@@ -161,6 +177,12 @@ bin/ticket_lock.o: $(LOCK_SRC_DEPS) src/lock/ticket_lock.c src/lock/ticket_lock.
 
 bin/aticket_lock.o: $(LOCK_SRC_DEPS) src/lock/aticket_lock.c src/lock/aticket_lock.h
 	$(CC) $(CFLAGS) -c src/lock/aticket_lock.c ; \
+	mv *.o bin/
+
+bin/cohort_lock.o: $(LOCK_SRC_DEPS) src/lock/cohort_lock.c src/lock/cohort_lock.h
+	INFO=$(NUMA_INFO); \
+	echo "NUMA INFO:" $$INFO ; \
+	$(CC) $(CFLAGS) $$INFO -c src/lock/cohort_lock.c ; \
 	mv *.o bin/
 
 bin/multi_writers_queue.o: src/datastructures/multi_writers_queue.c src/datastructures/multi_writers_queue.h src/utils/smp_utils.h
@@ -211,6 +233,9 @@ run_all_rw_bench_ticket_benchmarks: bin/rw_bench_clone_ticket
 
 run_all_rw_bench_aticket_benchmarks: bin/rw_bench_clone_aticket
 	./src/benchmark/run_all_rw_bench_clone.sh aticket $(BENCHMARK_NUM_OF_THREADS)
+
+run_all_rw_bench_cohort_benchmarks: bin/rw_bench_clone_cohort
+	./src/benchmark/run_all_rw_bench_clone.sh cohort $(BENCHMARK_NUM_OF_THREADS)
 
 run_writes_benchmark: bin/mixed_ops_benchmark bin/simple_delayed_writers_lock.o
 	FILE_NAME_PREFIX=benchmark_results/writes_benchmark_$(GIT_COMMIT) ; \

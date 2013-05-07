@@ -55,6 +55,15 @@
 #define LOCK_DATATYPE_NAME ATicketLock
 #define LOCK_FUN_PREFIX aticketlock
 
+#elif defined (LOCK_TYPE_CohortLock)
+//***********************************
+//CohortLock
+//***********************************
+#include "cohort_lock.h"
+
+#define LOCK_DATATYPE_NAME CohortLock
+#define LOCK_FUN_PREFIX cohortlock
+
 #else
 
 #define LOCK_DATATYPE_NAME NoLockDatatypeSpecified
