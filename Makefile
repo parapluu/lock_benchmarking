@@ -6,7 +6,8 @@ NUMA_INFO = `./src/lock/extract_numa_structure.py`
 
 BENCHMARK_NUM_OF_THREADS = 1 2 4 8
 CC = gcc
-CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O1 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS) 
+CFLAGS = -I. -Isrc/lock -Isrc/datastructures -Isrc/tests -Isrc/utils -Isrc/benchmark/skiplist -O1 -std=gnu99 -Wall -g -pthread -DNUMBER_OF_READER_GROUPS=$(NUMER_OF_READER_GROUPS)
+
 TEST_MULTI_WRITERS_QUEUE_OBJECTS = bin/multi_writers_queue.o bin/test_multi_writers_queue.o
 
 TEST_LOCK_OBJECTS = bin/multi_writers_queue.o
@@ -26,7 +27,7 @@ RW_BENCH_SRC_DEPS = src/benchmark/rw_bench_clone.c \
 
 LIBS =
 
-all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs bin/test_drmcs_lock bin/rw_bench_clone_drmcs bin/test_ticket_lock bin/rw_bench_clone_ticket bin/test_aticket_lock bin/rw_bench_clone_aticket bin/test_cohort_lock bin/rw_bench_clone_cohort
+all: bin/test_multi_writers_queue bin/test_simple_delayed_writers_lock bin/mixed_ops_benchmark bin/mixed_ops_benchmark_access_skiplist bin/rw_bench_clone_sdw bin/rw_bench_clone_aer bin/test_all_equal_rdx_lock bin/test_mcs_lock bin/rw_bench_clone_mcs bin/test_drmcs_lock bin/rw_bench_clone_drmcs bin/test_ticket_lock bin/rw_bench_clone_ticket bin/test_aticket_lock bin/rw_bench_clone_aticket bin/test_cohort_lock bin/rw_bench_clone_cohort bin/test_wprwcohort_lock bin/rw_bench_clone_wprwcohort
 
 #Executables
 
@@ -44,6 +45,10 @@ bin/test_mcs_lock: $(TEST_LOCK_OBJECTS) bin/test_mcs_lock.o bin/mcs_lock.o
 
 bin/test_drmcs_lock: $(TEST_LOCK_OBJECTS) bin/test_drmcs_lock.o bin/mcs_lock.o bin/drmcs_lock.o
 	$(CC) -o bin/test_drmcs_lock $(TEST_LOCK_OBJECTS) bin/test_drmcs_lock.o bin/drmcs_lock.o bin/mcs_lock.o $(LIBS) $(CFLAGS)
+
+bin/test_wprwcohort_lock: $(TEST_LOCK_OBJECTS) bin/test_wprwcohort_lock.o bin/cohort_lock.o bin/wprwcohort_lock.o bin/aticket_lock.o bin/ticket_lock.o
+	$(CC) -o bin/test_wprwcohort_lock $(TEST_LOCK_OBJECTS) bin/test_wprwcohort_lock.o bin/cohort_lock.o bin/wprwcohort_lock.o bin/aticket_lock.o bin/ticket_lock.o $(LIBS) $(CFLAGS)
+
 
 bin/test_ticket_lock: $(TEST_LOCK_OBJECTS) bin/test_ticket_lock.o bin/ticket_lock.o bin/ticket_lock.o
 	$(CC) -o bin/test_ticket_lock $(TEST_LOCK_OBJECTS) bin/test_ticket_lock.o bin/ticket_lock.o$(LIBS) $(CFLAGS)
@@ -68,6 +73,9 @@ bin/rw_bench_clone_mcs: bin/mcs_lock.o  bin/rw_bench_clone_mcs.o
 
 bin/rw_bench_clone_drmcs: bin/drmcs_lock.o bin/mcs_lock.o  bin/rw_bench_clone_drmcs.o
 	$(CC) -o bin/rw_bench_clone_drmcs  bin/mcs_lock.o bin/drmcs_lock.o bin/rw_bench_clone_drmcs.o $(LIBS) $(CFLAGS)
+
+bin/rw_bench_clone_wprwcohort: bin/wprwcohort_lock.o bin/cohort_lock.o  bin/rw_bench_clone_wprwcohort.o bin/aticket_lock.o bin/ticket_lock.o
+	$(CC) -o bin/rw_bench_clone_wprwcohort bin/wprwcohort_lock.o bin/cohort_lock.o  bin/rw_bench_clone_wprwcohort.o bin/aticket_lock.o bin/ticket_lock.o $(LIBS) $(CFLAGS)
 
 bin/rw_bench_clone_ticket: bin/ticket_lock.o bin/rw_bench_clone_ticket.o
 	$(CC) -o bin/rw_bench_clone_ticket bin/ticket_lock.o bin/rw_bench_clone_ticket.o $(LIBS) $(CFLAGS)
@@ -95,9 +103,15 @@ bin/test_mcs_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 	$(CC) $(CFLAGS) -DLOCK_TYPE_MCSLock -c src/tests/test_rdx_lock.c ; \
 	mv test_rdx_lock.o bin/test_mcs_lock.o
 
-bin/test_drmcs_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
-	$(CC) $(CFLAGS) -DLOCK_TYPE_DRMCSLock -c src/tests/test_rdx_lock.c ; \
+bin/test_drmcs_lock.o: $(TEST_SRC_DEPS) src/lock/wprw_lock.h src/tests/test_rdx_lock.c
+	$(CC) $(CFLAGS) -DLOCK_TYPE_WPRWLock -DLOCK_TYPE_WPRW_MCSLock -c src/tests/test_rdx_lock.c ; \
 	mv test_rdx_lock.o bin/test_drmcs_lock.o
+
+bin/test_wprwcohort_lock.o: $(TEST_SRC_DEPS) src/lock/wprw_lock.h src/tests/test_rdx_lock.c
+	INFO=$(NUMA_INFO); \
+	echo "NUMA INFO:" $$INFO ; \
+	$(CC) $(CFLAGS) $$INFO -DLOCK_TYPE_WPRWLock -DLOCK_TYPE_WPRW_CohortLock -c src/tests/test_rdx_lock.c ; \
+	mv test_rdx_lock.o bin/test_wprwcohort_lock.o
 
 bin/test_ticket_lock.o: $(TEST_SRC_DEPS) src/tests/test_rdx_lock.c
 	$(CC) $(CFLAGS) -DLOCK_TYPE_TicketLock -c src/tests/test_rdx_lock.c ; \
@@ -131,9 +145,15 @@ bin/rw_bench_clone_mcs.o: $(RW_BENCH_SRC_DEPS) src/lock/mcs_lock.h
 	$(CC) $(CFLAGS) -DLOCK_TYPE_MCSLock -c src/benchmark/rw_bench_clone.c ; \
 	mv rw_bench_clone.o bin/rw_bench_clone_mcs.o
 
-bin/rw_bench_clone_drmcs.o: $(RW_BENCH_SRC_DEPS) src/lock/drmcs_lock.h
-	$(CC) $(CFLAGS) -DLOCK_TYPE_DRMCSLock -c src/benchmark/rw_bench_clone.c ; \
+bin/rw_bench_clone_drmcs.o: $(RW_BENCH_SRC_DEPS) src/lock/wprw_lock.h
+	$(CC) $(CFLAGS) -DLOCK_TYPE_WPRWLock -DLOCK_TYPE_WPRW_MCSLock -c src/benchmark/rw_bench_clone.c ; \
 	mv rw_bench_clone.o bin/rw_bench_clone_drmcs.o
+
+bin/rw_bench_clone_wprwcohort.o: $(RW_BENCH_SRC_DEPS) src/lock/wprw_lock.h
+	INFO=$(NUMA_INFO); \
+	echo "NUMA INFO:" $$INFO ; \
+	$(CC) $(CFLAGS) -DLOCK_TYPE_WPRWLock -DLOCK_TYPE_WPRW_CohortLock $$INFO -c src/benchmark/rw_bench_clone.c ; \
+	mv rw_bench_clone.o bin/rw_bench_clone_wprwcohort.o
 
 bin/rw_bench_clone_ticket.o: $(RW_BENCH_SRC_DEPS) src/lock/ticket_lock.h
 	$(CC) $(CFLAGS) -DLOCK_TYPE_TicketLock -c src/benchmark/rw_bench_clone.c ; \
@@ -167,9 +187,15 @@ bin/mcs_lock.o: $(LOCK_SRC_DEPS) src/lock/mcs_lock.c src/lock/mcs_lock.h
 	$(CC) $(CFLAGS) -c src/lock/mcs_lock.c ; \
 	mv *.o bin/
 
-bin/drmcs_lock.o: $(LOCK_SRC_DEPS) src/lock/drmcs_lock.c src/lock/drmcs_lock.h
-	$(CC) $(CFLAGS) -c src/lock/drmcs_lock.c ; \
-	mv *.o bin/
+bin/drmcs_lock.o: $(LOCK_SRC_DEPS) src/lock/wprw_lock.c src/lock/wprw_lock.h
+	$(CC) $(CFLAGS) -DLOCK_TYPE_MCSLock -DLOCK_TYPE_WPRW_MCSLock -c src/lock/wprw_lock.c ; \
+	mv wprw_lock.o bin/drmcs_lock.o
+
+bin/wprwcohort_lock.o: $(LOCK_SRC_DEPS) src/lock/wprw_lock.c src/lock/wprw_lock.h
+	INFO=$(NUMA_INFO); \
+	echo "NUMA INFO:" $$INFO ; \
+	$(CC) $(CFLAGS) $$INFO -DLOCK_TYPE_CohortLock -DLOCK_TYPE_WPRW_CohortLock -c src/lock/wprw_lock.c ; \
+	mv wprw_lock.o bin/wprwcohort_lock.o
 
 bin/ticket_lock.o: $(LOCK_SRC_DEPS) src/lock/ticket_lock.c src/lock/ticket_lock.h
 	$(CC) $(CFLAGS) -c src/lock/ticket_lock.c ; \
@@ -227,6 +253,9 @@ run_all_rw_bench_mcs_benchmarks: bin/rw_bench_clone_mcs
 
 run_all_rw_bench_drmcs_benchmarks: bin/rw_bench_clone_drmcs
 	./src/benchmark/run_all_rw_bench_clone.sh drmcs $(BENCHMARK_NUM_OF_THREADS)
+
+run_all_rw_bench_wprwcohort_benchmarks: bin/rw_bench_clone_drmcs
+	./src/benchmark/run_all_rw_bench_clone.sh wprwcohort $(BENCHMARK_NUM_OF_THREADS)
 
 run_all_rw_bench_ticket_benchmarks: bin/rw_bench_clone_ticket
 	./src/benchmark/run_all_rw_bench_clone.sh ticket $(BENCHMARK_NUM_OF_THREADS)

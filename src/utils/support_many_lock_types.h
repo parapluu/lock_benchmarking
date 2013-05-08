@@ -28,14 +28,14 @@
 #define LOCK_DATATYPE_NAME MCSLock
 #define LOCK_FUN_PREFIX mcslock
 
-#elif defined (LOCK_TYPE_DRMCSLock)
+#elif defined (LOCK_TYPE_WPRWLock)
 //***********************************
-//DRMCSLock
+//WPRWLock
 //***********************************
-#include "drmcs_lock.h"
+#include "wprw_lock.h"
 
-#define LOCK_DATATYPE_NAME DRMCSLock
-#define LOCK_FUN_PREFIX drmcslock
+#define LOCK_DATATYPE_NAME WPRWLock
+#define LOCK_FUN_PREFIX wprwlock
 
 #elif defined (LOCK_TYPE_TicketLock)
 //***********************************

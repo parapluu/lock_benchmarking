@@ -31,7 +31,7 @@ void cohortlock_free(CohortLock * lock);
 void cohortlock_initialize(CohortLock * lock, void (*writer)(void *));
 void cohortlock_register_this_thread();
 void cohortlock_write(CohortLock *lock, void * writeInfo);
-void cohortlock_write_read_lock(CohortLock *lock);
+bool cohortlock_write_read_lock(CohortLock *lock);
 void cohortlock_write_read_unlock(CohortLock * lock);
 void cohortlock_read_lock(CohortLock *lock);
 void cohortlock_read_unlock(CohortLock *lock);

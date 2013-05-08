@@ -6,8 +6,6 @@
 #include <sched.h>
 #include "cohort_lock.h"
 
-__thread CacheLinePaddedInt myLocalNode  __attribute__((aligned(64)));
-
 
 typedef union CPUToNodeMapWrapperImpl {
 char padding[64];
@@ -15,7 +13,10 @@ char value[NUMBER_OF_NUMA_NODES * NUMBER_OF_CPUS_PER_NODE];
 char pad[64 - ((sizeof(char) * NUMBER_OF_NUMA_NODES * NUMBER_OF_CPUS_PER_NODE) % 64)];
 } CPUToNodeMapWrapper;
 
-CPUToNodeMapWrapper CPUToNodeMap;
+
+__thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
+
+CPUToNodeMapWrapper CPUToNodeMap __attribute__((aligned(64)));
 
 inline
 int numa_node_id(){
@@ -66,12 +67,16 @@ void cohortlock_write(CohortLock *lock, void * writeInfo) {
     cohortlock_write_read_unlock(lock);
 }
 
-void cohortlock_write_read_lock(CohortLock *lock) {
+//Returns true if it is taken over from another writer and false otherwise
+bool cohortlock_write_read_lock(CohortLock *lock) {
     myLocalNode.value = numa_node_id();
     NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value]; 
     ticketlock_write_read_lock(&localData->lock);
     if(localData->needToTakeGlobalLock.value){
         aticketlock_write_read_lock(&lock->globalLock);
+        return false;
+    }else{
+        return true;
     }
 }
 
