@@ -100,12 +100,12 @@ void wprwlock_read_lock(WPRWLock *lock) {
         indicateReadExit(lock);
         while(isWriteLocked(lock)){
             __sync_synchronize();
+            if((readPatience == READ_PATIENCE_LIMIT) && !bRaised){
+                __sync_fetch_and_add(&lock->writeBarrier.value, 1);
+                bRaised = true;
+            }
+            readPatience = readPatience + 1;
         }
-        if((readPatience == READ_PATIENCE_LIMIT) && !bRaised){
-            __sync_fetch_and_add(&lock->writeBarrier.value, 1);
-            bRaised = true;
-        }
-        readPatience = readPatience + 1;
         goto start;
     }
     if(bRaised){
