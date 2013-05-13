@@ -21,7 +21,7 @@
 typedef struct SeedWrapperImpl{
     char pad1[FALSE_SHARING_SECURITY];
     unsigned short value[3];
-    char pad2[FALSE_SHARING_SECURITY - sizeof(short)];
+    char pad2[FALSE_SHARING_SECURITY - (3*sizeof(short))];
 } SeedWrapper;
 
 typedef struct BoolWrapperImpl{
@@ -34,8 +34,14 @@ typedef struct BoolWrapperImpl{
 typedef struct LockWrapperImpl{
     char pad1[FALSE_SHARING_SECURITY];
     LOCK_DATATYPE_NAME value;
-    char pad2[sizeof(FALSE_SHARING_SECURITY)];
+    char pad2[FALSE_SHARING_SECURITY];
 } LockWrapper;
+
+typedef struct LockThreadLocalSeedImpl{
+    LOCK_DATATYPE_NAME * lock;
+    unsigned short * seed;
+} LockThreadLocalSeed;
+
 
 //=======================
 //Benchmark mutable state (Important that they are all on separate cache lines)
@@ -55,6 +61,8 @@ bool * benchmarkStarted = &benchmarkStartedWrapper.value;
 
 int sharedArrayWrapper[NUMBER_OF_ELEMENTS_IN_ARRAYS+2*FALSE_SHARING_SECURITY] __attribute__((aligned(64)));
 int * sharedArray = &sharedArrayWrapper[FALSE_SHARING_SECURITY];
+
+SeedWrapper threadLocalSeeds[128] __attribute__((aligned(64)));
 
 //========================
 //Benchmark imutable state
@@ -117,14 +125,13 @@ void mixed_read_write_benchmark_writer(void * x){
 
 int globalDummy = 0; //To avoid that the compiler optimize away read 
 
-void *mixed_read_write_benchmark_thread(void *lock_pointer){
+void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
     LOCK_REGISTER_THIS_THREAD();
-    LOCK_DATATYPE_NAME * lock = lock_pointer;
+    LockThreadLocalSeed * lockThreadLocalSeed = (LockThreadLocalSeed *)lockThreadLocalSeedPointer; 
+    LOCK_DATATYPE_NAME * lock = lockThreadLocalSeed->lock;
     int privateArray[NUMBER_OF_ELEMENTS_IN_ARRAYS];
-    unsigned short xsubi[3];
+    unsigned short * xsubi = lockThreadLocalSeed->seed;
     myXsubi = xsubi;
-    xsubi[0] = pthread_self();
-    xsubi[2] = pthread_self();
     int dummy = 0;//To avoid that the compiler optimize away read
     int totalNumberOfCriticalSections = 0;
     //START LINE
@@ -163,6 +170,11 @@ double benchmark_parallel_mixed_read_write(double percentageReadParam,
                                            int iterationsSpentInWriteCriticalSectionParam,
                                            int iterationsSpentInReadCriticalSectionParam,
                                            int iterationsSpentInNonCriticalSectionParam){
+    if(numberOfThreads>128){
+        printf("You need to increase the threadLocalSeeds variable!\n");
+        assert(false);
+    }
+
     imsw.percentageRead = percentageReadParam;
     imsw.iterationsSpentInWriteCriticalSection = iterationsSpentInWriteCriticalSectionParam;
     imsw.iterationsSpentInReadCriticalSection = iterationsSpentInReadCriticalSectionParam;
@@ -176,10 +188,20 @@ double benchmark_parallel_mixed_read_write(double percentageReadParam,
     for(int i = 0; i < NUMBER_OF_ELEMENTS_IN_ARRAYS; i++){
         sharedArray[i] = 0;
     }
+    LockThreadLocalSeed lockThreadLocalSeeds[numberOfThreads];
     for(int i = 0; i < numberOfThreads; i ++){
-        pthread_create(&threads[i],NULL,&mixed_read_write_benchmark_thread,lock);
+        unsigned short * seed = threadLocalSeeds[i].value;
+        srand48(i);
+        unsigned short * seedResult = seed48(seed);
+        seed[0] = seedResult[0];
+        seed[1] = seedResult[1];
+        seed[2] = seedResult[2];
+        LockThreadLocalSeed * lockThreadLocalSeed = &lockThreadLocalSeeds[i];
+        lockThreadLocalSeed->seed = seed;
+        lockThreadLocalSeed->lock = lock;
+        pthread_create(&threads[i],NULL,&mixed_read_write_benchmark_thread,lockThreadLocalSeed);
     }
-    usleep(1000000);//To make sure all threads are set up
+    usleep(100000);//To make sure all threads are set up
     gettimeofday(&timeStart, NULL);
     *benchmarkStarted = true;
     __sync_synchronize();

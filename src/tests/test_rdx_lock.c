@@ -189,8 +189,11 @@ int test_parallel_mixed_read_write(double percentageReadParam){
     for(int i = 0; i < NUMBER_OF_THREADS; i ++){
         LockCounter *lc = &lock_counters[i];
         lc->lock = lock;
-        lc->xsubi[0] = i;
-        lc->xsubi[2] = i;
+        srand48(i);
+        unsigned short* xsubi = seed48(lc->xsubi);
+        lc->xsubi[0] = xsubi[0];
+        lc->xsubi[1] = xsubi[1];
+        lc->xsubi[2] = xsubi[2];
         lc->logicalWritesInFuture = 0;
         lc->writesInFuture = 0;
         lc->pendingWrite = false;
