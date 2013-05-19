@@ -15,7 +15,7 @@ void aticketlock_initialize(ATicketLock * lock, void (*writer)(void *)){
     lock->writer = writer;
     lock->inCounter.value = 0;
     lock->outCounter.value = 0;
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
+    for(int i = 0; i < ARRAY_SIZE; i++){
         lock->spinAreas[i].value = 0;
     }
     __sync_synchronize();
@@ -37,7 +37,7 @@ void aticketlock_write(ATicketLock *lock, void * writeInfo) {
 
 void aticketlock_write_read_lock(ATicketLock *lock) {
     int myTicket = __sync_fetch_and_add(&lock->inCounter.value, 1);
-    int spinPosition = myTicket % NUMBER_OF_READER_GROUPS;
+    int spinPosition = myTicket % ARRAY_SIZE;
     while(ACCESS_ONCE(lock->spinAreas[spinPosition].value) != myTicket){
         __sync_synchronize();
     }
@@ -45,7 +45,7 @@ void aticketlock_write_read_lock(ATicketLock *lock) {
 
 void aticketlock_write_read_unlock(ATicketLock * lock) {
     lock->outCounter.value = lock->outCounter.value + 1;
-    int nextPosition = lock->outCounter.value % NUMBER_OF_READER_GROUPS;
+    int nextPosition = lock->outCounter.value % ARRAY_SIZE;
     lock->spinAreas[nextPosition].value = lock->outCounter.value;
     __sync_synchronize();
 }

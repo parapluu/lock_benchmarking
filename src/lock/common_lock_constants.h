@@ -1,10 +1,4 @@
 #ifndef COMMON_LOCK_CONSTANTS_H
 #define COMMON_LOCK_CONSTANTS_H
 
-#ifndef NUMBER_OF_READER_GROUPS
-
-#define NUMBER_OF_READER_GROUPS 8
-
-#endif
-
 #endif

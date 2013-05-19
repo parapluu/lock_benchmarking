@@ -13,7 +13,7 @@ typedef struct ATicketLockImpl {
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedInt inCounter;
     CacheLinePaddedInt outCounter;
-    CacheLinePaddedInt spinAreas[NUMBER_OF_READER_GROUPS];
+    CacheLinePaddedInt spinAreas[ARRAY_SIZE];
 } ATicketLock;
 
 
