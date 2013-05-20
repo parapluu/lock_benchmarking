@@ -105,10 +105,6 @@ lock_infos = OrderedDict([
                         'lock_deps'   : ['cohort'],
                         'other_deps'  : []})])
 
-test_prefix = 'test'
-
-benchmark_prefix = 'rw_bench_clone'
-
 
 lock_specific_object_defs = OrderedDict([
         ('test',             {'source'      : 'src/tests/test_rdx_lock.c',
