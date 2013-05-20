@@ -119,6 +119,11 @@ lock_specific_object_defs = OrderedDict([
                               'defines'     : ['RW_BENCH_MEM_TRANSFER']})])
 
 
+#Located in src/benchmark/
+benchmarks_scripts = ['compare_benchmarks.py',
+                      'benchmark_lock.py',
+                      'run_benchmarks_on_intel_i7.py',
+                      'run_benchmarks_on_sandy.py']
 
 #################
 #Generate objects
@@ -174,18 +179,7 @@ env.Program(
 #Copy scripts
 #############
 
-Command('compare_benchmarks.py', 
-        'src/benchmark/compare_benchmarks.py', 
-        Copy("$TARGET", "$SOURCE"))
-
-Command('benchmark_lock.py', 
-        'src/benchmark/benchmark_lock.py', 
-        Copy("$TARGET", "$SOURCE"))
-
-Command('run_benchmarks_on_intel_i7.py', 
-        'src/benchmark/run_benchmarks_on_intel_i7.py', 
-        Copy("$TARGET", "$SOURCE"))
-
-Command('run_benchmarks_on_sandy.py', 
-        'src/benchmark/run_benchmarks_on_sandy.py', 
-        Copy("$TARGET", "$SOURCE"))
+for benchmarks_script in benchmarks_scripts:
+    Command(benchmarks_script, 
+            'src/benchmark/' +benchmarks_script, 
+            Copy("$TARGET", "$SOURCE"))
