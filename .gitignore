@@ -22,5 +22,7 @@ test_sdw
 test_ticket
 test_wprwcohort
 .sconsign.dblite
+bin/
+bin_debug/
 TAGS
 core

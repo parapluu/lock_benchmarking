@@ -2,7 +2,7 @@ from collections import OrderedDict
 import multiprocessing
 
 import sys
-sys.path.append('../src/lock')
+sys.path.append('src/lock')
 from extract_numa_structure import numa_structure_defines
 
 
