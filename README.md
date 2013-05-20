@@ -1,10 +1,12 @@
 Read-Delegate-Exclusive (RDX) Lock 
 ==================================
 
-This repository contains a C implementation of the RDX lock as well as
-tests and benchmarks.
+This repository contains C implementations of RDX locks,
+[cohort lock](http://dl.acm.org/citation.cfm?id=2145848),
+[NUMA-aware reader-writer lock](http://dl.acm.org/citation.cfm?id=2442532),
+and MCS lock etc.
 
-## Description ##
+## RDX Lock Description ##
 
 The RDX lock can be acquired for three different types of access:
 
@@ -32,7 +34,7 @@ lock was acquired for the operation.
 ## Requirements ##
 
 * GCC (Tested with gcc version 4.7.2)
-* gnu make
+* [SCons](http://www.scons.org/) (build system)
 
 (The code has only been tested on Linux but should work with other
 operating systems)
@@ -40,20 +42,32 @@ operating systems)
 
 ## Build ##
 
-`make`
+`scons`
 
 ## Tests ##
 
-* `make run_test_multi_writers_queue`
-* `make run_test_simple_delayed_writers_lock`
+`./bin/test_aer`
+
+Where aer can be replaced with another lock id. 
 
 ## Benchmarks ##
 
-* `make run_writes_benchmark`
-* `make run_reads_benchmark`
-* `make run_80_percent_reads_benchmark`
+`./bin/benchmark_lock.py`
+
+The command will give you information about the parameters
+
+## Compare Benchmark Results ##
+
+`./bin/compare_benchmarks.py`
+
+The first parameter is the output dir (where the graphs are placed).
+
+The rest of the parameters are benchmark output dirs of benchmark that
+shall be compared. The benchmark results are produced by the
+`./bin/benchmark_lock.py` script.
 
 ## Usage ##
 
-See tests under the directory `tests/` and the API in
-`lock/simple_delayed_writers_lock.h`.
+See tests under the directory `src/tests`, the benchmarks under
+directory `src/benchmark` and the API's for the locks in
+`lock/*_lock.h`.

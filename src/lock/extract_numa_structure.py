@@ -9,27 +9,6 @@ from subprocess import PIPE
 import re 
 import socket
 
-def detectCPUs():
- """
- Detects the number of CPUs on a system.
- """
- # Linux, Unix and MacOS:
- if hasattr(os, "sysconf"):
-     if os.sysconf_names.has_key("SC_NPROCESSORS_ONLN"):
-         # Linux & Unix:
-         ncpus = os.sysconf("SC_NPROCESSORS_ONLN")
-         if isinstance(ncpus, int) and ncpus > 0:
-             return ncpus
-     else: # OSX:
-         return int(os.popen2("sysctl -n hw.ncpu")[1].read())
- # Windows:
- if os.environ.has_key("NUMBER_OF_PROCESSORS"):
-         ncpus = int(os.environ["NUMBER_OF_PROCESSORS"]);
-         if ncpus > 0:
-             return ncpus
- return 1 # Default
-
-
 def numa_structure():
     lscpu_pipe = Popen("lscpu",stdout = PIPE).stdout
     number_of_numa_nodes = 0
@@ -81,8 +60,4 @@ def numa_structure_defines():
             ('NUMA_STRUCTURE', numaStructure)]
 
 number_of_numa_nodes, cpus_per_node, numaStructure = numa_structure()
-
-print "-DNUMBER_OF_NUMA_NODES="+str(number_of_numa_nodes)+" "
-print "-DNUMBER_OF_CPUS_PER_NODE="+str(cpus_per_node)+" "
-print ("-DNUMA_STRUCTURE={" + numaStructure + "}")
     

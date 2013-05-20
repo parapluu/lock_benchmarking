@@ -152,3 +152,30 @@ for lock_id in lock_infos:
                                  prefix=test_prefix)
     create_lock_specific_program(lock_id=lock_id,
                                  prefix=benchmark_prefix)
+
+
+
+env.Program(
+    target = 'test_multi_writers_queue',
+    source = ['src/tests/test_multi_writers_queue.c',
+              object_multi_writers_queue])
+
+#############
+#Copy scripts
+#############
+
+Command('compare_benchmarks.py', 
+        'src/benchmark/compare_benchmarks.py', 
+        Copy("$TARGET", "$SOURCE"))
+
+Command('benchmark_lock.py', 
+        'src/benchmark/benchmark_lock.py', 
+        Copy("$TARGET", "$SOURCE"))
+
+Command('run_benchmarks_on_intel_i7.py', 
+        'src/benchmark/run_benchmarks_on_intel_i7.py', 
+        Copy("$TARGET", "$SOURCE"))
+
+Command('run_benchmarks_on_sandy.py', 
+        'src/benchmark/run_benchmarks_on_sandy.py', 
+        Copy("$TARGET", "$SOURCE"))

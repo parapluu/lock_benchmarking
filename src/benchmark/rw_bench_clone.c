@@ -216,7 +216,6 @@ double benchmark_parallel_mixed_read_write(double percentageReadParam,
     for(int i = 0; i < numberOfThreads; i++){
         long threadNumberOfOperations;
         pthread_join(threads[i],(void*)&threadNumberOfOperations);
-        //printf("THREAD NUMBER OF OPS: %ld\n", threadNumberOfOperations);
         totalNumberOfOperations = totalNumberOfOperations + threadNumberOfOperations;
     }
     gettimeofday(&timeEnd, NULL);
@@ -229,91 +228,60 @@ double benchmark_parallel_mixed_read_write(double percentageReadParam,
     assert(sharedArraySum == 0);
 
     long benchmarRealTime = (timeEnd.tv_sec-timeStart.tv_sec)*1000000 + timeEnd.tv_usec-timeStart.tv_usec;
-    //printf("BENCHMARK REAL TIME: %f\n", ((double)benchmarRealTime)/1000000.0);
-    //printf("BENCHMARK TOTAL NUMBER OF OPS: %ld\n", totalNumberOfOperations);
 
     double timePerOp = ((double)benchmarRealTime)/((double)totalNumberOfOperations);
     return timePerOp;
 }
 
 
-void run_scaling_benchmark(int numOfThreadsArraySize,
-                           int* numOfThreadsArray,
+void run_scaling_benchmark(int numOfThreads,
                            double percentageReadParam,
                            int benchmarkTimeSeconds,
                            int iterationsSpentInWriteCriticalSectionParam,
                            int iterationsSpentInReadCriticalSectionParam,
-                           int iterationsSpentInNonCriticalSectionParam,
-                           char benchmark_identifier[]){
-
-    char * file_name_buffer = malloc(4096);
-    char file_name_format [] = "%s.dat";
-
-    sprintf(file_name_buffer, file_name_format, benchmark_identifier);
-    FILE *benchmark_file = fopen(file_name_buffer, "w");
-
-    free(file_name_buffer);
-
-    fprintf(stderr, "\n\n\033[32m -- STARTING BENCHMARKS FOR %s! -- \033[m\n\n", benchmark_identifier);
+                           int iterationsSpentInNonCriticalSectionParam){
             
-    for(int i = 0 ; i < numOfThreadsArraySize; i++){
-        int numOfThreads = numOfThreadsArray[i];
-        printf("=> Benchmark %d threads\n", numOfThreads);
-        double time = benchmark_parallel_mixed_read_write(percentageReadParam, 
-                                                          numOfThreads,
-                                                          benchmarkTimeSeconds,
-                                                          iterationsSpentInWriteCriticalSectionParam,
-                                                          iterationsSpentInReadCriticalSectionParam,
-                                                          iterationsSpentInNonCriticalSectionParam);
-        fprintf(benchmark_file, "%d %f\n", numOfThreads, time);
-        printf("|| %f microseconds/operation (%d threads)\n", time, numOfThreads);
-    }
-
-    fclose(benchmark_file);
-
-    printf("\n\n\033[32m -- BENCHMARKS FOR %s COMPLETED! -- \033[m\n\n", benchmark_identifier);
-
-
+    fprintf(stderr, "=> Benchmark %d threads\n", numOfThreads);
+    double time = benchmark_parallel_mixed_read_write(percentageReadParam, 
+                                                      numOfThreads,
+                                                      benchmarkTimeSeconds,
+                                                      iterationsSpentInWriteCriticalSectionParam,
+                                                      iterationsSpentInReadCriticalSectionParam,
+                                                      iterationsSpentInNonCriticalSectionParam);
+    printf("%d %f\n", numOfThreads, time);
+    fprintf(stderr, "|| %f microseconds/operation (%d threads)\n", time, numOfThreads);
 
 }
 
 
 int main(int argc, char **argv){
-    int numberOfStandardArgs = 7;
-    if(argc < (numberOfStandardArgs + 1)){
+    int numberOfStandardArgs = 6;
+    if((argc-1) < numberOfStandardArgs){
         printf("The benchmark requires the following paramters:\n");
         printf("\n");
-        printf("benchmarkIdentifier\n");
-        printf("percentageRead\n");
-        printf("numberOfSecondsToBenchmark\n");
-        printf("iterationsSpentInWriteCriticalSection\n");
-        printf("iterationsSpentInReadCriticalSection\n");
-        printf("iterationsSpentInNonCriticalSection\n");
-        printf("List of number of threads to test on\n");
+        printf("* Number of threads\n");
+        printf("* Percentage read\n");
+        printf("* Number of seconds to benchmark\n");
+        printf("* Iterations spent in write critical section\n");
+        printf("* Iterations spent in read critical section\n");
+        printf("* Iterations spent in non critical section\n");
         printf("\n");
         printf("Example\n");
-        printf("./bin/rw_bench_clone myBench 0.8 10 4 4 64 1 2 3 4\n");
+        printf("%s 0.8 10 4 4 64\n", argv[0]);
     }else{
-        char * benchmarkIdentifier = argv[1];
+        int numOfThreads = atoi(argv[1]);
         double percentageRead = atof(argv[2]);
         int numberOfSecondsToBenchmark = atoi(argv[3]);
         int iterationsSpentInWriteCriticalSection = atoi(argv[4]);
         int iterationsSpentInReadCriticalSection = atoi(argv[5]);
         int iterationsSpentInNonCriticalSection = atoi(argv[6]);
 
-        int numOfThreadsArraySize = argc - numberOfStandardArgs;
-        int numOfThreadsArray[numOfThreadsArraySize];
-        for (int i = numberOfStandardArgs; i < argc; i++) {
-            numOfThreadsArray[i-numberOfStandardArgs] = atoi(argv[i]);
-        }
-        run_scaling_benchmark(numOfThreadsArraySize,
-                              numOfThreadsArray,
+        run_scaling_benchmark(numOfThreads,
                               percentageRead,
                               numberOfSecondsToBenchmark,
                               iterationsSpentInWriteCriticalSection,
                               iterationsSpentInReadCriticalSection,
-                              iterationsSpentInNonCriticalSection,
-                              benchmarkIdentifier);   
+                              iterationsSpentInNonCriticalSection);   
     }
     exit(0);                          
 }

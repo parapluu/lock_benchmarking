@@ -6,12 +6,27 @@ from os.path import join
 from os import mkdir
 from subprocess import Popen
 from subprocess import PIPE 
+
+sys.argv.pop(0)
+
+if len(sys.argv) < 2:
+    print """Not enough parameters:
+
+The first parameter is the output dir (where the graphs are placed).
+
+The rest of the parameters are benchmark output dirs of benchmark that
+shall be compared. The benchmark results are produced by the
+bin/benchmark_lock.py script.
+
+"""
+    sys.exit()
+
 output_dir = sys.argv[1]
 
 sys.argv.pop(0)
-sys.argv.pop(0)
 
 compare_dirs = sys.argv
+
 
 print 'Output dir:', output_dir
 
