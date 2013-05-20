@@ -21,9 +21,7 @@ bin/benchmark_lock.py script.
 """
     sys.exit()
 
-output_dir = sys.argv[1]
-
-sys.argv.pop(0)
+output_dir = sys.argv.pop(0)
 
 compare_dirs = sys.argv
 

@@ -98,6 +98,16 @@ __thread unsigned short * myXsubi;
         sharedArray[writeToPos2] = sharedArray[writeToPos2] - randomNumber; \
     } while (0)
 
+#define WORK_IN_WRITE_CRITICAL_SECTION_2                                \
+    do {                                                                \
+        int randomNumber = (int)(long)x;                                    \
+        int writeToPos1 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);         \
+        sharedArray[writeToPos1] = sharedArray[writeToPos1] + randomNumber; \
+        int writeToPos2 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);     \
+        sharedArray[writeToPos2] = sharedArray[writeToPos2] - randomNumber; \
+    } while (0)
+
+
 #define WORK_IN_READ_CRITICAL_SECTION_1                                 \
     do {                                                                \
         int readPos1 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);        \
@@ -115,11 +125,22 @@ __thread unsigned short * myXsubi;
         privateArray[writeToPos2] = privateArray[writeToPos2] - randomNumber; \
     } while (0)
 
+#ifdef RW_BENCH_CLONE
+#define WORK_IN_WRITE_CRITICAL_SECTION WORK_IN_WRITE_CRITICAL_SECTION_1
+#define WORK_IN_READ_CRITICAL_SECTION WORK_IN_READ_CRITICAL_SECTION_1
+#define WORK_IN_NON_CRITICAL_SECTION WORK_IN_NON_CRITICAL_SECTION_1
+#endif
+
+#ifdef RW_BENCH_MEM_TRANSFER
+#define WORK_IN_WRITE_CRITICAL_SECTION WORK_IN_WRITE_CRITICAL_SECTION_2
+#define WORK_IN_READ_CRITICAL_SECTION WORK_IN_READ_CRITICAL_SECTION_1
+#define WORK_IN_NON_CRITICAL_SECTION WORK_IN_NON_CRITICAL_SECTION_1
+#endif
 
 void mixed_read_write_benchmark_writer(void * x){
     unsigned short * xsubi = myXsubi;
     for(int i = 0; i < imsw.iterationsSpentInWriteCriticalSection; i++){
-        WORK_IN_WRITE_CRITICAL_SECTION_1;
+        WORK_IN_WRITE_CRITICAL_SECTION;
     }
 }
 
@@ -140,16 +161,21 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
     }
     while(!ACCESS_ONCE(*benchmarkStoped)){
         if(erand48(xsubi) > imsw.percentageRead){
+#ifdef RW_BENCH_CLONE
             LOCK_WRITE(lock, (void *)1);
+#else
+            int randomNumber = (int)(jrand48(xsubi) & ADD_RAND_NUM_MASK) + 1;
+            LOCK_WRITE(lock, (void *)(long)randomNumber);
+#endif
         }else{
             LOCK_READ_LOCK(lock);
             for(int u = 0; u < imsw.iterationsSpentInReadCriticalSection; u++){
-                WORK_IN_READ_CRITICAL_SECTION_1;
+                WORK_IN_READ_CRITICAL_SECTION;
             }
             LOCK_READ_UNLOCK(lock);
         }
         for(int u = 0; u < imsw.iterationsSpentInNonCriticalSection; u++){
-            WORK_IN_NON_CRITICAL_SECTION_1;
+            WORK_IN_NON_CRITICAL_SECTION;
         }
         totalNumberOfCriticalSections++;
     }

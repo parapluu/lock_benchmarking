@@ -103,21 +103,33 @@ lock_infos = OrderedDict([
                                          array_size_define, 
                                          rg_define]  + numa_structure_defines(),
                         'lock_deps'   : ['cohort'],
-                        'other_deps'  : []}),])
+                        'other_deps'  : []})])
 
-test_prefix = 'test_'
+test_prefix = 'test'
 
-benchmark_prefix = 'rw_bench_clone_'
+benchmark_prefix = 'rw_bench_clone'
+
+
+lock_specific_object_defs = OrderedDict([
+        ('test',             {'source'      : 'src/tests/test_rdx_lock.c',
+                              'defines'     : []}),
+        ('rw_bench_clone',   {'source'      : 'src/benchmark/rw_bench_clone.c',
+                             'defines'     : ['RW_BENCH_CLONE']}),
+        ('rw_bench_memtrans',{'source'      : 'src/benchmark/rw_bench_clone.c',
+                              'defines'     : ['RW_BENCH_MEM_TRANSFER']})])
+
+
 
 #################
 #Generate objects
 #################
 
-def create_lock_specific_object(lock_id, source, prefix):
+def create_lock_specific_object(lock_id, lock_specific_object_def_id):
+    definition = lock_specific_object_defs[lock_specific_object_def_id]
     return env.Object(
-        target = prefix + lock_id + '.o',
-        source = source,
-        CPPDEFINES = lock_infos[lock_id]['exe_defines'])
+        target = lock_specific_object_def_id + '_' + lock_id + '.o',
+        source = definition['source'],
+        CPPDEFINES = lock_infos[lock_id]['exe_defines'] + definition['defines'])
 
 for lock_id in lock_infos:
     lock_info = lock_infos[lock_id]
@@ -129,31 +141,28 @@ for lock_id in lock_infos:
         target = lock_info['source'] + lock_id + '.o',
         source = 'src/lock/' + lock_info['source'] + '.c',
         CPPDEFINES=lock_info['defines'])
-    lock_info[test_prefix] = ( 
-        create_lock_specific_object(lock_id=lock_id,
-                                    source='src/tests/test_rdx_lock.c',
-                                    prefix=test_prefix))
-    lock_info[benchmark_prefix] = (
-        create_lock_specific_object(lock_id=lock_id,
-                                    source='src/benchmark/rw_bench_clone.c',
-                                    prefix=benchmark_prefix))
+    for lock_specific_object_def_id in lock_specific_object_defs:
+        lock_info[lock_specific_object_def_id] = ( 
+            create_lock_specific_object(lock_id,
+                                        lock_specific_object_def_id))
+
 
 ##############
 #Link programs
 ##############
 
-def create_lock_specific_program(lock_id, prefix):
+def create_lock_specific_program(lock_id, lock_specific_object_def_id):
     lock_info = lock_infos[lock_id]
     return env.Program(
-        target = prefix + lock_id,
-        source = lock_info[prefix] + lock_info['obj'] + lock_info['other_deps'])
+        target = lock_specific_object_def_id + '_' + lock_id,
+        source = ([lock_info[lock_specific_object_def_id], 
+                  lock_info['obj']] + 
+                  lock_info['other_deps']))
 
 for lock_id in lock_infos:
-    create_lock_specific_program(lock_id=lock_id,
-                                 prefix=test_prefix)
-    create_lock_specific_program(lock_id=lock_id,
-                                 prefix=benchmark_prefix)
-
+    for lock_specific_object_def_id in lock_specific_object_defs:
+        create_lock_specific_program(lock_id,
+                                     lock_specific_object_def_id)
 
 
 env.Program(
