@@ -86,10 +86,8 @@ for benchmark_id in [benchmark_name + "_" + lock_id
                         process = subprocess.Popen(command, stdout=outfile)
                         process.wait()
                     else:
-                        print 'num_of_cpus_per_node',num_of_cpus_per_node
                         max_node_id = (int(thread_count)-1) / num_of_cpus_per_node
                         nomactrl = ['numactl', '--cpunodebind=' + ",".join([str(x) for x in range(0,max_node_id+1)])]
-                        print (nomactrl + command)
                         process = subprocess.Popen(nomactrl + command, stdout=outfile)
                         process.wait()
                 print "\n\n\033[32m -- BENCHMARKS FOR " + output_file_str + " COMPLETED! -- \033[m\n\n"
