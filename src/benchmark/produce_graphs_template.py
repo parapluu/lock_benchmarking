@@ -14,6 +14,7 @@ def read_dat_file(the_file):
         return (x, y)
 
 def set_up_figure(title):
+    plt.figure()
     plt.xlabel('Number of Threads')
     plt.ylabel('Microseconds / Operation') 
     plt.title(title)
