@@ -30,16 +30,14 @@ if sys.argv[0] == '-matplotlib':
     use_matplotlib_out = True
     sys.argv.pop(0)
 
-output_dir = sys.argv.pop(0)
+output_dir_or_file = sys.argv.pop(0)
 
 compare_dirs = sys.argv
 
 dat_files = [f for f in listdir(compare_dirs[0]) if f.endswith(".dat")]
 
-mkdir(output_dir)
-
 if use_matplotlib_out:
-    output_file = output_dir
+    output_file = output_dir_or_file
     copy(join(dirname(__file__), '../src/benchmark/produce_graphs_template.py'), output_file)
     with open(output_file, "a") as f:
         for in_file_name in dat_files:
@@ -49,8 +47,9 @@ if use_matplotlib_out:
             f.write('complete_figure("%s")\n' % in_file_name)
             f.write("\n")
 else:
+    mkdir(output_dir_or_file)
     for file in dat_files:
-        out_file_prefix = join(output_dir, file)
+        out_file_prefix = join(output_dir_or_file, file)
         gnuplot_pipe = Popen("gnuplot",stdin = PIPE).stdin
         gnuplot_pipe.write("set terminal png size 1024,768\n")
         gnuplot_pipe.write("set output \"%s.png\"\n" % out_file_prefix)
