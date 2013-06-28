@@ -15,6 +15,7 @@ def read_dat_file(the_file):
 
 def set_up_figure(title):
     plt.figure()
+    plt.autoscale(enable=True, tight=False)
     plt.xlabel('Number of Threads')
     plt.ylabel('Microseconds / Operation') 
     plt.title(title)
@@ -26,7 +27,9 @@ def plot_file(the_file, title):
 
 
 def complete_figure(save_file_name):
-    plt.legend()
+    plt.axis(xmin=0)
+    plt.axis(ymin=0)
+    plt.legend(loc='best')
     plt.savefig(save_file_name + '.pdf', bbox_inches=0)
     print save_file_name + '.pdf'
 
