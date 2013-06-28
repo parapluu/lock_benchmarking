@@ -26,3 +26,4 @@ bin/
 bin_debug/
 TAGS
 core
+bench_results
