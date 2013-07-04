@@ -23,9 +23,14 @@ debug_flags = ['-O1',
 
 optimization_flags = ['-O3']
 
+profile_flags = ['-fno-omit-frame-pointer -O2']
+
 if(mode=='debug'):
     std_cc_flags = std_cc_flags + debug_flags
     std_link_flags = std_link_flags + debug_flags
+elif(mode=='profile'):
+    std_cc_flags = std_cc_flags + profile_flags
+    std_link_flags = std_link_flags + profile_flags
 else:
     std_cc_flags = std_cc_flags + optimization_flags
     std_link_flags = std_link_flags + optimization_flags
@@ -121,6 +126,9 @@ benchmarks_scripts = ['compare_benchmarks.py',
                       'run_benchmarks_on_intel_i7.py',
                       'run_benchmarks_on_sandy.py']
 
+#Located in src/profile/
+profile_scripts = ['profile_perf.py']
+
 #################
 #Generate objects
 #################
@@ -177,5 +185,12 @@ env.Program(
 
 for benchmarks_script in benchmarks_scripts:
     Command(benchmarks_script, 
-            'src/benchmark/' +benchmarks_script, 
+            'src/benchmark/' + benchmarks_script, 
             Copy("$TARGET", "$SOURCE"))
+
+
+if(mode=='profile'):
+    for profile_script in profile_scripts:
+        Command(profile_script, 
+                'src/profile/' + profile_script, 
+                Copy("$TARGET", "$SOURCE"))
