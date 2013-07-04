@@ -27,3 +27,5 @@ bin_debug/
 TAGS
 core
 bench_results
+bin_profile
+perf_data

@@ -15,6 +15,16 @@ bin_dir_path = os.path.dirname(os.path.realpath(__file__))
 
 sys.argv.pop(0)
 
+if len(sys.argv) == 0:
+    print """
+profile with perf script
+========================
+
+Usage:
+
+./bin_profile/profile_perf.py locksubfix [An optional list of rw_bench parameters. Default parameters will be used if not specified.]"""
+    exit(0)
+
 lock_subfix = sys.argv.pop(0)
 
 result = ''
@@ -23,22 +33,26 @@ print lock_subfix
 
 print sys.argv
 
+command = None
+
 if len(sys.argv) == 0:
-    subprocess.call(['perf', 
-                     'record',
-                     '-g',
-                     join(bin_dir_path, 'rw_bench_clone_' + lock_subfix), 
-                     str(multiprocessing.cpu_count()), 
-                     '0.8',
-                     '10',
-                     '4',
-                     '4',
-                     '0'])
+    command = ['perf',
+               'record',
+               '-g',
+               join(bin_dir_path, 'rw_bench_clone_' + lock_subfix), 
+               str(multiprocessing.cpu_count()), 
+               '0.8',
+               '10',
+               '4',
+               '4',
+               '0']
 else:
-    subprocess.call(['perf',
-                     'record',
-                     '-g',
-                     join(bin_dir_path, 'rw_bench_clone_' + lock_subfix)] + sys.argv)
+    command = ['perf',
+               'record',
+               '-g',
+               join(bin_dir_path, 'rw_bench_clone_' + lock_subfix)] + sys.argv
+
+subprocess.call(command)
 
 out_dir = 'perf_data'
 
@@ -50,6 +64,16 @@ the_date = datetime.datetime.now().strftime("%Y.%m.%d.%H.%M.%S")
 out_file = join(out_dir, 'perf.data_' + the_date + result)
 
 shutil.copy2('perf.data', out_file)
+
+print ""
+
+print "Info:"
+
+print ""
+
+print 'The command: ' + ' '.join(command)
+
+print ""
 
 print "The profile data can be found in the file: " + out_file
 
