@@ -25,7 +25,11 @@ int numa_node_id(){
 
 inline
 bool nodeHasWaitingThreads(TicketLock * localLock){
-    return (ACCESS_ONCE(localLock->inCounter.value) - ACCESS_ONCE(localLock->outCounter.value)) > 1;
+    int localLockInCounter;
+    int localLockOutCounter;
+    load_acq(localLockInCounter, localLock->inCounter.value); 
+    load_acq(localLockOutCounter, localLock->outCounter.value);
+    return (localLockInCounter - localLockOutCounter) > 1;
 }
  
 CohortLock * cohortlock_create(void (*writer)(void *)){
@@ -82,7 +86,6 @@ bool cohortlock_write_read_lock(CohortLock *lock) {
 
 void cohortlock_write_read_unlock(CohortLock * lock) {
     NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value];
-    __sync_synchronize();
     if(nodeHasWaitingThreads(&localData->lock) && 
        (localData->numberOfHandOvers.value < MAXIMUM_NUMBER_OF_HAND_OVERS)){
         localData->needToTakeGlobalLock.value = false;

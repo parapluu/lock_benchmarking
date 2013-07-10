@@ -33,8 +33,11 @@ void ticketlock_write(TicketLock *lock, void * writeInfo) {
 }
 
 void ticketlock_write_read_lock(TicketLock *lock) {
+    int outCounter;
     int myTicket = __sync_fetch_and_add(&lock->inCounter.value, 1);
-    while(ACCESS_ONCE(lock->outCounter.value) != myTicket){
+    load_acq(outCounter, lock->outCounter.value);
+    while(outCounter != myTicket){
+        load_acq(outCounter, lock->outCounter.value);
         __sync_synchronize();
     }
 }

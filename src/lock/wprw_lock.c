@@ -26,20 +26,28 @@ void indicateReadExit(WPRWLock * lock){
 
 inline
 void waitUntilAllReadersAreGone(WPRWLock * lock){
+    int count;
     for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        while(ACCESS_ONCE(lock->readLocks[i].value) > 0){    
+        load_acq(count, lock->readLocks[i].value);
+        while(count > 0){    
             __sync_synchronize();
-        };
+            load_acq(count, lock->readLocks[i].value);
+        }
     }
 }
 
 inline
 bool isWriteLocked(WPRWLock * lock){
 #ifdef LOCK_TYPE_MCSLock
-    return ACCESS_ONCE(lock->lock.endOfQueue.value) != NULL;
+    MCSNode * endOfQueue;
+    load_acq(endOfQueue, lock->lock.endOfQueue.value);
+    return endOfQueue != NULL;
 #elif defined (LOCK_TYPE_CohortLock)
-    return (ACCESS_ONCE(lock->lock.globalLock.inCounter.value) != 
-            ACCESS_ONCE(lock->lock.globalLock.outCounter.value));
+    int inCounter;
+    int outCounter;
+    load_acq(inCounter, lock->lock.globalLock.inCounter.value);
+    load_acq(outCounter, lock->lock.globalLock.outCounter.value);
+    return (inCounter != outCounter);
 #else
     printf("WPRW LOCK: Unsuported mutal exclusion lock\n");
     assert(false);
@@ -79,8 +87,11 @@ void wprwlock_write(WPRWLock *lock, void * writeInfo) {
 }
 
 void wprwlock_write_read_lock(WPRWLock *lock) {
-    while(ACCESS_ONCE(lock->writeBarrier.value)){
+    bool writeBarrierOn;
+    load_acq(writeBarrierOn, lock->writeBarrier.value);
+    while(writeBarrierOn){
         __sync_synchronize();
+        load_acq(writeBarrierOn, lock->writeBarrier.value);
     }
     if(!LOCK_WRITE_READ_LOCK(&lock->lock)){
         waitUntilAllReadersAreGone(lock);
@@ -99,7 +110,7 @@ void wprwlock_read_lock(WPRWLock *lock) {
     if(isWriteLocked(lock)){
         indicateReadExit(lock);
         while(isWriteLocked(lock)){
-            __sync_synchronize();
+            __sync_synchronize();//Pause (pause instruction might be better)
             if((readPatience == READ_PATIENCE_LIMIT) && !bRaised){
                 __sync_fetch_and_add(&lock->writeBarrier.value, 1);
                 bRaised = true;

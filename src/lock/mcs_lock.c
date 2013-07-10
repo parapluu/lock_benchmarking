@@ -4,6 +4,7 @@
 
 #include "mcs_lock.h"
 
+__thread MCSNode myMCSNode __attribute__((aligned(64)));
 
 inline
 MCSNode * get_and_set_node_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue){
@@ -14,8 +15,6 @@ MCSNode * get_and_set_node_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue)
         x = ACCESS_ONCE(*pointerToOldValue);
     }
 }
-
-__thread MCSNode myMCSNode __attribute__((aligned(64)));
  
 MCSLock * mcslock_create(void (*writer)(void *)){
     MCSLock * lock = malloc(sizeof(MCSLock));
@@ -33,7 +32,6 @@ void mcslock_free(MCSLock * lock){
     free(lock);
 }
 
-
 void mcslock_register_this_thread(){
     MCSNode * node = &myMCSNode;
     node->locked.value = false;
@@ -49,17 +47,18 @@ void mcslock_write(MCSLock *lock, void * writeInfo) {
 
 //Returns true if it is taken over from another writer and false otherwise
 bool mcslock_write_read_lock(MCSLock *lock) {
+    bool isNodeLocked;
     MCSNode * node = &myMCSNode;
     node->next.value = NULL;
     MCSNode * predecessor = get_and_set_node_ptr(&lock->endOfQueue.value, node);
     if (predecessor != NULL) {
-        node->locked.value = true;
-        __sync_synchronize();
-        predecessor->next.value = node;
-        __sync_synchronize();
+        store_rel(node->locked.value, true);
+        store_rel(predecessor->next.value, node);
+        load_acq(isNodeLocked, node->locked.value);
         //Wait
-        while (ACCESS_ONCE(node->locked.value)) {
+        while (isNodeLocked) {
             __sync_synchronize();
+            load_acq(isNodeLocked, node->locked.value);
         }
         return true;
     }else{
@@ -68,19 +67,22 @@ bool mcslock_write_read_lock(MCSLock *lock) {
 }
 
 void mcslock_write_read_unlock(MCSLock * lock) {
+    MCSNode * nextNode;
     MCSNode * node = &myMCSNode;
-    __sync_synchronize();
-    if (ACCESS_ONCE(node->next.value) == NULL) {
+    load_acq(nextNode, node->next.value);
+    if (nextNode == NULL) {
         if (__sync_bool_compare_and_swap(&lock->endOfQueue.value, node, NULL)){
             return;
         }
         //wait
-        while (ACCESS_ONCE(node->next.value) == NULL) {
-            __sync_synchronize();
+        load_acq(nextNode, node->next.value);
+        while (nextNode == NULL) {
+             __sync_synchronize();
+            load_acq(nextNode, node->next.value);
         }
     }
-    node->next.value->locked.value = false;
-    __sync_synchronize();
+    store_rel(node->next.value->locked.value, false);
+    __sync_synchronize();//Push change
 }
 
 void mcslock_read_lock(MCSLock *lock) {

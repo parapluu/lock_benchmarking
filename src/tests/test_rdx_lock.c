@@ -216,7 +216,7 @@ int test_parallel_mixed_read_write(double percentageReadParam){
 
 int main(int argc, char **argv){
     
-    printf("\n\n\n\033[32m ### STARTING SIMPLE DELAYED WRITERS LOCK TESTS! -- \033[m\n\n\n");
+    printf("\n\n\n\033[32m ### STARTING LOCK TESTS! -- \033[m\n\n\n");
 
     T(test_create(), "test_create()");
 
@@ -244,7 +244,7 @@ int main(int argc, char **argv){
 
     T(test_parallel_mixed_read_write(0.0),"test_parallel_mixed_read_write(0.0)");
 
-    printf("\n\n\n\033[32m ### SIMPLE DELAYED WRITERS LOCK COMPLETED! -- \033[m\n\n\n");
+    printf("\n\n\n\033[32m ### LOCK TESTS COMPLETED! -- \033[m\n\n\n");
 
     exit(0);
 

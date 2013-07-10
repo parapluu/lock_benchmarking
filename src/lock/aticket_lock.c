@@ -36,18 +36,21 @@ void aticketlock_write(ATicketLock *lock, void * writeInfo) {
 }
 
 void aticketlock_write_read_lock(ATicketLock *lock) {
+    int waitTicket;
     int myTicket = __sync_fetch_and_add(&lock->inCounter.value, 1);
     int spinPosition = myTicket % ARRAY_SIZE;
-    while(ACCESS_ONCE(lock->spinAreas[spinPosition].value) != myTicket){
+    load_acq(waitTicket, lock->spinAreas[spinPosition].value);
+    while(waitTicket != myTicket){
         __sync_synchronize();
+        load_acq(waitTicket, lock->spinAreas[spinPosition].value);
     }
 }
 
 void aticketlock_write_read_unlock(ATicketLock * lock) {
     lock->outCounter.value = lock->outCounter.value + 1;
     int nextPosition = lock->outCounter.value % ARRAY_SIZE;
-    lock->spinAreas[nextPosition].value = lock->outCounter.value;
-    __sync_synchronize();
+    store_rel(lock->spinAreas[nextPosition].value, lock->outCounter.value);
+    __sync_synchronize();//Push change
 }
 
 void aticketlock_read_lock(ATicketLock *lock) {

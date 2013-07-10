@@ -150,7 +150,7 @@ void aerlock_write(AllEqualRDXLock *lock, void * writeInfo) {
 }
 
 void aerlock_write_read_lock(AllEqualRDXLock *lock) {
-    int isNodeLocked;
+    bool isNodeLocked;
     Node * node = &myNode;
     node->next.value = NULL;
     Node * predecessor = get_and_set_node_ptr(&lock->endOfQueue.value, node);
@@ -183,7 +183,7 @@ void flushWriteQueue(AllEqualRDXLock * lock, MWQueue * writeQueue){
 }
 
 void aerlock_write_read_unlock(AllEqualRDXLock * lock) {
-    Node * nextNode = &myNode;
+    Node * nextNode;
     Node * node = &myNode;
     flushWriteQueue(lock, &node->writeQueue);
     disableReadSpinning(node);
