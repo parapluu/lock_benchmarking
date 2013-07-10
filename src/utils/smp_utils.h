@@ -2,6 +2,7 @@
 #define SMP_UTILS_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 //Make sure compiler does not optimize away memory access
 #define ACCESS_ONCE(x) (*(volatile typeof(x) *)&(x))
@@ -11,6 +12,49 @@
 
 //Compiller barrier
 #define barrier() __asm__ __volatile__("": : :"memory")
+
+//See the following URL for explanation of acquire and release semantics:
+//http://preshing.com/20120913/acquire-and-release-semantics
+
+//Load with acquire barrier
+#if __x86_64__
+#define load_acq(assign_to,load_from) \
+    assign_to = ACCESS_ONCE(load_from)
+#else
+#define load_acq(assign_to,load_from)           \
+    do {                                        \
+        barrier();                              \
+        assign_to = ACCESS_ONCE(load_from);     \
+        __sync_synchronize();                   \
+    } while(0)
+#endif
+
+
+//Store with release barrier
+#if __x86_64__
+#define store_rel(store_to,store_value) \
+    do{                                 \
+        barrier();                      \
+        store_to = store_value;        \
+        barrier();                      \
+    }while(0);
+#else
+#define store_rel(store_to,store_value) \
+    do{                                 \
+        __sync_synchronize();           \
+        store_to = store_value;        \
+        barrier();                      \
+    }while(0);
+#endif
+
+//Intel pause instruction
+#if __x86_64__
+#define pause_instruction() \
+  __asm volatile ("pause" ::: "memory")
+#else
+#define pause_instruction() \
+  __sync_synchronize()
+#endif
 
 inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
@@ -31,6 +75,5 @@ typedef union CacheLinePaddedIntImpl {
     int value;
     char padding[64];
 } CacheLinePaddedInt;
-
 
 #endif

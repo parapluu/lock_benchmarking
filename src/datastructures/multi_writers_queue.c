@@ -30,10 +30,11 @@ void mwqueue_free(MWQueue * queue){
     free(queue);
 }
 
+inline
 bool mwqueue_offer(MWQueue * queue, entry e){
     int index = __sync_fetch_and_add(&queue->elementCount.value, 1);
     if(index < MWQ_CAPACITY){
-        queue->elements[index] = e;
+        store_rel(queue->elements[index], e);
         __sync_synchronize();
         return true;
     }else{
@@ -41,58 +42,68 @@ bool mwqueue_offer(MWQueue * queue, entry e){
     }
 }
 
+inline
+void init_read(MWQueue * queue){
+    load_acq(queue->numOfElementsToRead, queue->elementCount.value);
+    if(queue->numOfElementsToRead >= MWQ_CAPACITY){
+        queue->closed = true;
+        queue->numOfElementsToRead = MWQ_CAPACITY;
+    }
+    queue->readStarted = true;
+}
+
+inline
 entry mwqueue_take(MWQueue * queue){
     if(queue->readStarted == false){
-        //Read number of elements and lock the queue for inserts
-        __sync_synchronize();
-        queue->numOfElementsToRead = ACCESS_ONCE(queue->elementCount.value);
-        if(queue->numOfElementsToRead >= MWQ_CAPACITY){
-            queue->closed = true;
-            queue->numOfElementsToRead = MWQ_CAPACITY;
-        }
-        queue->readStarted = true;
+        init_read(queue);
     }
-    bool repeat = false;
     do{
         if(queue->readCurrentElementIndex < queue->numOfElementsToRead){
-            entry theElement = ACCESS_ONCE(queue->elements[queue->readCurrentElementIndex]);
+            //There is definitly an element that we should read
+            entry theElement;
+            load_acq(theElement, queue->elements[queue->readCurrentElementIndex]);
             while(theElement == NULL) {
                 __sync_synchronize();
-                theElement = ACCESS_ONCE(queue->elements[queue->readCurrentElementIndex]);
+                load_acq(theElement, queue->elements[queue->readCurrentElementIndex]);
             }
             queue->elements[queue->readCurrentElementIndex] = NULL;
             queue->readCurrentElementIndex = queue->readCurrentElementIndex + 1;
             return theElement;
         }else if (queue->closed){
+            //The queue is closed and there is no more elements that need to be read:
             return NULL;
         }else{
-            __sync_synchronize();
-            int newNumOfElementsToRead = ACCESS_ONCE(queue->elementCount.value);
+            //Seems like there are no elements that should be read and the queue is
+            //not closed. Check again if there are still no more elements that should
+            //be read before closing the queue
+            int newNumOfElementsToRead;
+            load_acq(newNumOfElementsToRead, queue->elementCount.value);
             if(newNumOfElementsToRead < MWQ_CAPACITY){  
+                //The capacity is not reached
+                //Check if the number of elements to read has changed before closing
+                //the queue.
                 if(newNumOfElementsToRead == queue->numOfElementsToRead){
+                    //numOfElementsToRead has not changed. Close the queue.
                     queue->numOfElementsToRead = 
-                        min(get_and_set_int(&queue->elementCount.value, MWQ_CAPACITY + 1), MWQ_CAPACITY);
+                        min(get_and_set_int(&queue->elementCount.value, MWQ_CAPACITY + 1), 
+                            MWQ_CAPACITY);
                     queue->closed = true;
-                    repeat = true;
                 }else{
                     queue->numOfElementsToRead = newNumOfElementsToRead;
-                    repeat = true;
                 }
             }else {
                 queue->closed = true;
                 queue->numOfElementsToRead = MWQ_CAPACITY;
-                repeat = true;
             } 
         }
-    }while(repeat);
+    }while(true);
     return NULL;
 }
 
-    
+inline
 void mwqueue_reset_fully_read(MWQueue * queue){
-    queue->readCurrentElementIndex = 0;
-    queue->readStarted = false;
-    queue->closed = false;
-    queue->elementCount.value = 0;
-    __sync_synchronize();
+    store_rel(queue->readCurrentElementIndex, 0);
+    store_rel(queue->readStarted, false);
+    store_rel(queue->closed, false);
+    store_rel(queue->elementCount.value, 0);
 }

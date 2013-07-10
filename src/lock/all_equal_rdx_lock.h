@@ -7,6 +7,8 @@
 
 struct NodeImpl;
 
+
+
 typedef union CacheLinePaddedNodePtrImpl {
     struct NodeImpl * value;
     char padding[64];
