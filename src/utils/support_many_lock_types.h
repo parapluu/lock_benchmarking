@@ -64,6 +64,13 @@
 #define LOCK_DATATYPE_NAME CohortLock
 #define LOCK_FUN_PREFIX cohortlock
 
+#elif defined (LOCK_TYPE_FlatCombRDXLock)
+
+#include "flat_comb_rdx_lock.h"
+
+#define LOCK_DATATYPE_NAME FlatCombRDXLock
+#define LOCK_FUN_PREFIX fcrdxlock
+
 #else
 
 #define LOCK_DATATYPE_NAME NoLockDatatypeSpecified

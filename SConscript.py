@@ -110,7 +110,13 @@ lock_infos = OrderedDict([
                                          array_size_define, 
                                          rg_define]  + numa_structure_defines(),
                         'lock_deps'   : ['cohort'],
-                        'other_deps'  : []})])
+                        'other_deps'  : []}),
+        ('fcrdx',        {'source'      : 'flat_comb_rdx_lock',
+                          'defines'     : [rg_define],
+                          'exe_defines' : ['LOCK_TYPE_FlatCombRDXLock',
+                                           rg_define],
+                          'lock_deps'   : [],
+                          'other_deps'  : []})])
 
 
 lock_specific_object_defs = OrderedDict([

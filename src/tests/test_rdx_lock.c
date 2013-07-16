@@ -124,7 +124,7 @@ int test_read_write_lock_is_blocking_other_read_lock(){
 
 
 
-#define MICRO_SECONDS_TO_RUN_TEST 10000000
+#define MICRO_SECONDS_TO_RUN_TEST 1000000
 
 CacheLinePaddedBool test_phase_is_on __attribute__((aligned(128))) = {.value = false};
 CacheLinePaddedInt count __attribute__((aligned(128))) = {.value = 0};
