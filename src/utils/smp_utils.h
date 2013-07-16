@@ -76,6 +76,11 @@ typedef union CacheLinePaddedIntImpl {
     char padding[128];
 } CacheLinePaddedInt;
 
+typedef union CacheLinePaddedDoubleImpl {
+    double value;
+    char padding[128];
+} CacheLinePaddedDouble;
+
 typedef union CacheLinePaddedPointerImpl {
     void * value;
     char padding[64];

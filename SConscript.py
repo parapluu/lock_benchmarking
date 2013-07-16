@@ -49,6 +49,8 @@ num_of_cores_str=str(multiprocessing.cpu_count())
 
 rg_define = ('NUMBER_OF_READER_GROUPS',num_of_cores_str)
 
+hardware_threads_define = ('NUMBER_OF_HARDWARE_THREADS',num_of_cores_str)
+
 #For partitioned ticket lock
 array_size_define = ('ARRAY_SIZE',num_of_cores_str)
 
@@ -113,7 +115,7 @@ lock_infos = OrderedDict([
 
 lock_specific_object_defs = OrderedDict([
         ('test',             {'source'      : 'src/tests/test_rdx_lock.c',
-                              'defines'     : []}),
+                              'defines'     : [hardware_threads_define]}),
         ('rw_bench_clone',   {'source'      : 'src/benchmark/rw_bench_clone.c',
                              'defines'     : ['RW_BENCH_CLONE']}),
         ('rw_bench_memtrans',{'source'      : 'src/benchmark/rw_bench_clone.c',
