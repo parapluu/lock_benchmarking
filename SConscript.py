@@ -56,19 +56,21 @@ array_size_define = ('ARRAY_SIZE',num_of_cores_str)
 
 object_multi_writers_queue = env.Object("src/datastructures/multi_writers_queue.c")
 
+object_thread_id = env.Object("src/utils/thread_identifier.c")
+
 lock_infos = OrderedDict([
         ('sdw',        {'source'      : 'simple_delayed_writers_lock',
                         'defines'     : [rg_define],
                         'exe_defines' : ['LOCK_TYPE_SimpleDelayedWritesLock', 
                                          rg_define],
                         'lock_deps'   : [],
-                        'other_deps'  : [object_multi_writers_queue]}),
+                        'other_deps'  : [object_multi_writers_queue, object_thread_id]}),
         ('aer',        {'source'      : 'all_equal_rdx_lock',
                         'defines'     : [rg_define],
                         'exe_defines' : ['LOCK_TYPE_AllEqualRDXLock',
                                          rg_define],
                         'lock_deps'   : [],
-                        'other_deps'  : [object_multi_writers_queue]}),
+                        'other_deps'  : [object_multi_writers_queue, object_thread_id]}),
         ('mcs',        {'source'      : 'mcs_lock',
                         'defines'     : [],
                         'exe_defines' : ['LOCK_TYPE_MCSLock'],
@@ -82,7 +84,7 @@ lock_infos = OrderedDict([
                                          'LOCK_TYPE_WPRW_MCSLock',
                                          rg_define],
                         'lock_deps'   : ['mcs'],
-                        'other_deps'  : []}),
+                        'other_deps'  : [object_thread_id]}),
         ('ticket',     {'source'      : 'ticket_lock',
                         'defines'     : [],
                         'exe_defines' : ['LOCK_TYPE_TicketLock'],
@@ -110,13 +112,13 @@ lock_infos = OrderedDict([
                                          array_size_define, 
                                          rg_define]  + numa_structure_defines(),
                         'lock_deps'   : ['cohort'],
-                        'other_deps'  : []}),
+                        'other_deps'  : [object_thread_id]}),
         ('fcrdx',        {'source'      : 'flat_comb_rdx_lock',
                           'defines'     : [rg_define],
                           'exe_defines' : ['LOCK_TYPE_FlatCombRDXLock',
                                            rg_define],
                           'lock_deps'   : [],
-                          'other_deps'  : []})])
+                          'other_deps'  : [object_thread_id]})])
 
 
 lock_specific_object_defs = OrderedDict([

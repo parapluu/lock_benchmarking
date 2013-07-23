@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-
+#include "thread_identifier.h"
 #include "simple_delayed_writers_lock.h"
 #include "smp_utils.h"
 
@@ -19,28 +19,7 @@ Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
 
 
 __thread Node myNode __attribute__((aligned(64)));
-__thread int myId __attribute__((aligned(64)));
 
-int myIdCounter = 0;
-
-inline
-void indicateReadEnter(SimpleDelayedWritesLock * lock){
-    __sync_fetch_and_add(&lock->readLocks[myId % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void indicateReadExit(SimpleDelayedWritesLock * lock){
-    __sync_fetch_and_sub(&lock->readLocks[myId % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void waitUntilAllReadersAreGone(SimpleDelayedWritesLock * lock){
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        while(ACCESS_ONCE(lock->readLocks[i].value) > 0){    
-            __sync_synchronize();
-        };
-    }
-}
  
 SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *)){
     SimpleDelayedWritesLock * lock = malloc(sizeof(SimpleDelayedWritesLock));
@@ -51,9 +30,7 @@ SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *)){
 void sdwlock_initialize(SimpleDelayedWritesLock * lock, void (*writer)(void *)){
     lock->writer = writer;
     lock->endOfQueue.value = NULL;
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        lock->readLocks[i].value = 0;
-    }
+    NZI_INITIALIZE(&lock->nonZeroIndicator);
     __sync_synchronize();
 }
 
@@ -64,7 +41,7 @@ void sdwlock_free(SimpleDelayedWritesLock * lock){
 
 void sdwlock_register_this_thread(){
     Node * node = &myNode;
-    myId = __sync_fetch_and_add(&myIdCounter, 1);
+    assign_id_to_thread();
     node->locked.value = false;
     node->next.value = NULL;
     node->readLockIsWriteLock = false;
@@ -96,7 +73,7 @@ void sdwlock_write_read_lock(SimpleDelayedWritesLock *lock) {
             __sync_synchronize();
         }
     }else{
-        waitUntilAllReadersAreGone(lock);
+        NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
     }
 }
 
@@ -135,9 +112,9 @@ void sdwlock_read_lock(SimpleDelayedWritesLock *lock) {
     Node * node = &myNode;
     __sync_synchronize();
     if(ACCESS_ONCE(lock->endOfQueue.value) == NULL){
-        indicateReadEnter(lock);
+        NZI_ARRIVE(&lock->nonZeroIndicator);
         if(ACCESS_ONCE(lock->endOfQueue.value) != NULL){
-            indicateReadExit(lock);
+            NZI_DEPART(&lock->nonZeroIndicator);
             convertReadLockToWriteLock(lock, node);
         }
     }else{
@@ -151,6 +128,6 @@ void sdwlock_read_unlock(SimpleDelayedWritesLock *lock) {
         sdwlock_write_read_unlock(lock);
         node->readLockIsWriteLock = false;
     } else {
-        indicateReadExit(lock);
+        NZI_DEPART(&lock->nonZeroIndicator);
     }
 }

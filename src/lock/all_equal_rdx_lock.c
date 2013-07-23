@@ -5,13 +5,11 @@
 #include <stdio.h>
 #include "all_equal_rdx_lock.h"
 #include "smp_utils.h"
+#include "thread_identifier.h"
 
 #define NUMBER_OF_READ_SPIN_ATTEMPTS 10000
 
 __thread Node myNode __attribute__((aligned(64)));
-
-__thread CacheLinePaddedInt myId __attribute__((aligned(64)));
-int myIdCounter = 0;
 
 inline
 Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
@@ -24,48 +22,12 @@ Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
 }
 
 inline
-void indicateReadEnter(AllEqualRDXLock * lock){
-    __sync_fetch_and_add(&lock->readLocks[myId.value % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void indicateReadExit(AllEqualRDXLock * lock){
-    __sync_fetch_and_sub(&lock->readLocks[myId.value % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void indicateReadEnterToQueueNode(Node * node){
-    __sync_fetch_and_add(&node->readSpinnerFlags[myId.value % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void indicateReadExitFromQueueNode(Node * node){
-    __sync_fetch_and_sub(&node->readSpinnerFlags[myId.value % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void waitUntilAllReadersAreGone(AllEqualRDXLock * lock){
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        while(ACCESS_ONCE(lock->readLocks[i].value) > 0){    
-            __sync_synchronize();
-        };
-    }
-}
-
-inline
 void disableReadSpinning(Node * node){
-    int count;
     store_rel(node->readSpinningEnabled.value, false);
     //We need a StoreLoad barrier since we don't want the store above
     //to be reorderd with the loads below
     __sync_synchronize();
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        load_acq(count, node->readSpinnerFlags[i].value); 
-        while(count > 0){
-            __sync_synchronize();
-            load_acq(count, node->readSpinnerFlags[i].value);
-        }
-    }
+    NZI_WAIT_UNIL_EMPTY(&node->nonZeroIndicator);
 }
 
 inline
@@ -75,17 +37,17 @@ bool tryReadSpinningInQueue(AllEqualRDXLock * lock, Node * myNode){
     for(int i = 0; i < NUMBER_OF_READ_SPIN_ATTEMPTS; i++){
         load_acq(node, lock->endOfQueue.value);
         if(node == NULL){
-            indicateReadEnter(lock);
+            NZI_ARRIVE(&lock->nonZeroIndicator);
             load_acq(node, lock->endOfQueue.value);
             if(node != NULL){
-                indicateReadExit(lock);
+                NZI_DEPART(&lock->nonZeroIndicator);
             }else{
                 return true;
             }
         }else{
             load_acq(spinInNodeEnabled, node->readSpinningEnabled.value);
             if(spinInNodeEnabled){
-                indicateReadEnterToQueueNode(node);
+                NZI_ARRIVE(&node->nonZeroIndicator);
                 load_acq(spinInNodeEnabled, node->readSpinningEnabled.value);
                 if(spinInNodeEnabled){
                     load_acq(spinInNodeEnabled, node->readSpinningEnabled.value);  
@@ -97,7 +59,7 @@ bool tryReadSpinningInQueue(AllEqualRDXLock * lock, Node * myNode){
                     myNode->readLockSpinningNode = node;
                     return true;
                 }else{
-                    indicateReadExitFromQueueNode(node);
+                    NZI_DEPART(&node->nonZeroIndicator);
                 }
             }
         }
@@ -115,9 +77,7 @@ AllEqualRDXLock * aerlock_create(void (*writer)(void *)){
 void aerlock_initialize(AllEqualRDXLock * lock, void (*writer)(void *)){
     lock->writer = writer;
     lock->endOfQueue.value = NULL;
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        lock->readLocks[i].value = 0;
-    }
+    NZI_INITIALIZE(&lock->nonZeroIndicator);
     __sync_synchronize();
 }
 
@@ -127,14 +87,12 @@ void aerlock_free(AllEqualRDXLock * lock){
 
 void aerlock_register_this_thread(){
     Node * node = &myNode;
-    myId.value = __sync_fetch_and_add(&myIdCounter, 1);
+    assign_id_to_thread();
     node->locked.value = false;
     node->next.value = NULL;
     node->readLockIsWriteLock = false;
     node->readLockIsSpinningOnNode = false;
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        node->readSpinnerFlags[i].value = 0;
-    }
+    NZI_INITIALIZE(&node->nonZeroIndicator);
     node->readSpinningEnabled.value = false;
     mwqueue_initialize(&node->writeQueue);
 }
@@ -169,7 +127,7 @@ void aerlock_write_read_lock(AllEqualRDXLock *lock) {
         //This is necessary because we don't want the stores above to be reorderd
         //with the following loads
         __sync_synchronize();
-        waitUntilAllReadersAreGone(lock);
+        NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
     }
 }
 
@@ -222,9 +180,9 @@ void aerlock_read_unlock(AllEqualRDXLock *lock) {
         aerlock_write_read_unlock(lock);
         node->readLockIsWriteLock = false;
     }else if(node->readLockIsSpinningOnNode){
-        indicateReadExitFromQueueNode(node->readLockSpinningNode);
+        NZI_DEPART(&node->readLockSpinningNode->nonZeroIndicator);
         node->readLockIsSpinningOnNode = false;
     } else {
-        indicateReadExit(lock);
+        NZI_DEPART(&lock->nonZeroIndicator);
     }
 }

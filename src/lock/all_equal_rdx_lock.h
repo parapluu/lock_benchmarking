@@ -1,13 +1,12 @@
 #include <stdbool.h>
 #include "multi_writers_queue.h"
 #include "common_lock_constants.h"
+#include "support_many_non_zero_indicator_types.h"
 
 #ifndef ALL_EQUAL_RDX_LOCK_H
 #define ALL_EQUAL_RDX_LOCK_H
 
 struct NodeImpl;
-
-
 
 typedef union CacheLinePaddedNodePtrImpl {
     struct NodeImpl * value;
@@ -20,7 +19,7 @@ typedef struct NodeImpl {
     CacheLinePaddedNodePtr next;
     CacheLinePaddedBool locked;
     CacheLinePaddedBool readSpinningEnabled;
-    CacheLinePaddedInt readSpinnerFlags[NUMBER_OF_READER_GROUPS];
+    NZI_DATATYPE_NAME nonZeroIndicator;
     bool readLockIsWriteLock;
     bool readLockIsSpinningOnNode;
     struct NodeImpl * readLockSpinningNode;
@@ -32,7 +31,7 @@ typedef struct AllEqualRDXLockImpl {
     void (*writer)(void *);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedNodePtr endOfQueue;
-    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS];
+    NZI_DATATYPE_NAME nonZeroIndicator;
 } AllEqualRDXLock;
 
 

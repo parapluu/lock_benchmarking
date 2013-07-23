@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include "multi_writers_queue.h"
 #include "common_lock_constants.h"
+#include "support_many_non_zero_indicator_types.h"
 
 #ifndef SIMPLE_DELAYED_WRITERS_LOCK_H
 #define SIMPLE_DELAYED_WRITERS_LOCK_H
@@ -25,7 +26,7 @@ typedef struct SimpleDelayedWritesLockImpl {
     void (*writer)(void *);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedNodePtr endOfQueue;
-    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS];
+    NZI_DATATYPE_NAME nonZeroIndicator;
 } SimpleDelayedWritesLock;
 
 

@@ -2,6 +2,7 @@
 #include "smp_utils.h"
 #include "common_lock_constants.h"
 #include "support_many_lock_types.h"
+#include "support_many_non_zero_indicator_types.h"
 
 #ifndef WPRW_LOCK_H
 #define WPRW_LOCK_H
@@ -32,7 +33,8 @@ typedef struct WPRWLockImpl {
     char pad1[64];
     LOCK_DATATYPE_NAME_WPRW lock;
     CacheLinePaddedInt writeBarrier;
-    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS];
+    NZI_DATATYPE_NAME nonZeroIndicator;
+    //    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS];
 } WPRWLock;
 
 WPRWLock * wprwlock_create(void (*writer)(void *));

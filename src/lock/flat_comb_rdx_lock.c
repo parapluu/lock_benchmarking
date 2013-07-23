@@ -1,5 +1,6 @@
 #include "flat_comb_rdx_lock.h"
 #include <stdlib.h>
+#include "thread_identifier.h"
 
 #define READ_PATIENCE_LIMIT 1000
 
@@ -9,33 +10,12 @@ FlatCombNode statically_allocated_fc_nodes[STATICALLY_ALLOCATED_FLAT_COMB_NODES]
 
 __thread CacheLinePaddedFlatCombNodePtr myFCNode __attribute__((aligned(64)));
 __thread FCMCSNode myFCMCSNode __attribute__((aligned(64)));
-__thread CacheLinePaddedInt myId __attribute__((aligned(64)));
-int myIdCounter = 0;
 
 inline
 bool isWriteLocked(FlatCombRDXLock * lock){
     FCMCSNode * endOfMCSQueue;
     load_acq(endOfMCSQueue, lock->endOfMCSQueue.value);
     return endOfMCSQueue != NULL;
-}
-
-inline
-void waitUntilAllReadersAreGone(FlatCombRDXLock * lock){
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        while(ACCESS_ONCE(lock->readLocks[i].value) > 0){    
-            __sync_synchronize();
-        };
-    }
-}
-
-inline
-void indicateReadEnter(FlatCombRDXLock * lock){
-    __sync_fetch_and_add(&lock->readLocks[myId.value % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void indicateReadExit(FlatCombRDXLock * lock){
-    __sync_fetch_and_sub(&lock->readLocks[myId.value % NUMBER_OF_READER_GROUPS].value, 1);
 }
 
 inline
@@ -68,9 +48,7 @@ void fcrdxlock_initialize(FlatCombRDXLock * lock, void (*writer)(void *)){
     lock->combine_count = 0;
     lock->combine_list.value = NULL;
     lock->endOfMCSQueue.value = NULL;
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        lock->readLocks[i].value = 0;
-    }
+    NZI_INITIALIZE(&lock->nonZeroIndicator);
     lock->writeBarrier.value = 0;
     __sync_synchronize();
 }
@@ -82,7 +60,7 @@ void fcrdxlock_free(FlatCombRDXLock * lock){
 void fcrdxlock_register_this_thread(){
     FlatCombNode * fcNode;
     FCMCSNode * fcMCSNode = &myFCMCSNode;
-    myId.value = __sync_fetch_and_add(&myIdCounter, 1);
+    assign_id_to_thread();
     if(myId.value < STATICALLY_ALLOCATED_FLAT_COMB_NODES){
         myFCNode.value = &statically_allocated_fc_nodes[myId.value];
     }else{
@@ -161,7 +139,7 @@ bool try_write_read_lock(FlatCombRDXLock *lock) {
     node->next.value = NULL;
     if(ACCESS_ONCE(lock->endOfMCSQueue.value) == NULL &&
        try_set_node_ptr(&lock->endOfMCSQueue.value, node)){
-        waitUntilAllReadersAreGone(lock);
+        NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
         return true;
     }else{
         return false;
@@ -212,7 +190,7 @@ void fcrdxlock_write_read_lock(FlatCombRDXLock *lock) {
             load_acq(isNodeLocked, node->locked.value);
         }
     }else{
-        waitUntilAllReadersAreGone(lock);
+        NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
     }
     combine_requests(lock);
 }
@@ -240,9 +218,9 @@ void fcrdxlock_read_lock(FlatCombRDXLock *lock) {
     bool bRaised = false; 
     int readPatience = 0;
  start:
-    indicateReadEnter(lock);
+    NZI_ARRIVE(&lock->nonZeroIndicator);
     if(isWriteLocked(lock)){
-        indicateReadExit(lock);
+        NZI_DEPART(&lock->nonZeroIndicator);
         while(isWriteLocked(lock)){
             __sync_synchronize();//Pause (pause instruction might be better)
             if((readPatience == READ_PATIENCE_LIMIT) && !bRaised){
@@ -259,5 +237,5 @@ void fcrdxlock_read_lock(FlatCombRDXLock *lock) {
 }
 
 void fcrdxlock_read_unlock(FlatCombRDXLock *lock) {
-    indicateReadExit(lock);
+    NZI_DEPART(&lock->nonZeroIndicator);
 }

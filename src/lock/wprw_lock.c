@@ -7,34 +7,10 @@
 #include "wprw_lock.h"
 #include "support_many_lock_types.h"
 #include "smp_utils.h"
+#include "thread_identifier.h"
+
 
 #define READ_PATIENCE_LIMIT 1000
-
-__thread int myId __attribute__((aligned(64)));
-
-int myIdCounter = 0;
-
-inline
-void indicateReadEnter(WPRWLock * lock){
-    __sync_fetch_and_add(&lock->readLocks[myId % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void indicateReadExit(WPRWLock * lock){
-    __sync_fetch_and_sub(&lock->readLocks[myId % NUMBER_OF_READER_GROUPS].value, 1);
-}
-
-inline
-void waitUntilAllReadersAreGone(WPRWLock * lock){
-    int count;
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        load_acq(count, lock->readLocks[i].value);
-        while(count > 0){    
-            __sync_synchronize();
-            load_acq(count, lock->readLocks[i].value);
-        }
-    }
-}
 
 inline
 bool isWriteLocked(WPRWLock * lock){
@@ -64,9 +40,7 @@ WPRWLock * wprwlock_create(void (*writer)(void *)){
 void wprwlock_initialize(WPRWLock * lock, void (*writer)(void *)){
     LOCK_INITIALIZE(&lock->lock, writer);
     lock->writeBarrier.value = 0;
-    for(int i = 0; i < NUMBER_OF_READER_GROUPS; i++){
-        lock->readLocks[i].value = 0;
-    }
+    NZI_INITIALIZE(&lock->nonZeroIndicator);
     __sync_synchronize();
 }
 
@@ -77,7 +51,7 @@ void wprwlock_free(WPRWLock * lock){
 
 void wprwlock_register_this_thread(){
     LOCK_REGISTER_THIS_THREAD();
-    myId = __sync_fetch_and_add(&myIdCounter, 1);
+    assign_id_to_thread();
 }
 
 void wprwlock_write(WPRWLock *lock, void * writeInfo) {
@@ -94,7 +68,7 @@ void wprwlock_write_read_lock(WPRWLock *lock) {
         load_acq(writeBarrierOn, lock->writeBarrier.value);
     }
     if(!LOCK_WRITE_READ_LOCK(&lock->lock)){
-        waitUntilAllReadersAreGone(lock);
+        NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
     }
 }
 
@@ -106,9 +80,9 @@ void wprwlock_read_lock(WPRWLock *lock) {
     bool bRaised = false; 
     int readPatience = 0;
  start:
-    indicateReadEnter(lock);
+    NZI_ARRIVE(&lock->nonZeroIndicator);
     if(isWriteLocked(lock)){
-        indicateReadExit(lock);
+        NZI_DEPART(&lock->nonZeroIndicator);
         while(isWriteLocked(lock)){
             __sync_synchronize();//Pause (pause instruction might be better)
             if((readPatience == READ_PATIENCE_LIMIT) && !bRaised){
@@ -125,5 +99,5 @@ void wprwlock_read_lock(WPRWLock *lock) {
 }
 
 void wprwlock_read_unlock(WPRWLock *lock) {
-    indicateReadExit(lock);
+    NZI_DEPART(&lock->nonZeroIndicator);
 }
