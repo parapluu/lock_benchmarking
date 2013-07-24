@@ -5,23 +5,9 @@
 #include <assert.h>
 #include <sched.h>
 #include "cohort_lock.h"
-
-
-typedef union CPUToNodeMapWrapperImpl {
-char padding[64];
-char value[NUMBER_OF_NUMA_NODES * NUMBER_OF_CPUS_PER_NODE];
-char pad[64 - ((sizeof(char) * NUMBER_OF_NUMA_NODES * NUMBER_OF_CPUS_PER_NODE) % 64)];
-} CPUToNodeMapWrapper;
-
+#include "numa_node_info_support.h"
 
 __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
-
-CPUToNodeMapWrapper CPUToNodeMap __attribute__((aligned(64)));
-
-inline
-int numa_node_id(){
-    return CPUToNodeMap.value[sched_getcpu()];
-}  
 
 inline
 bool nodeHasWaitingThreads(TicketLock * localLock){

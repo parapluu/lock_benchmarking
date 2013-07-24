@@ -58,24 +58,44 @@ object_multi_writers_queue = env.Object("src/datastructures/multi_writers_queue.
 
 object_thread_id = env.Object("src/utils/thread_identifier.c")
 
+object_numa_node_info = env.Object(source = "src/utils/numa_node_info_support.c",
+                                   CPPDEFINES = numa_structure_defines())
+
+object_numa_ingress_egress_nzi = env.Object(source = "src/datastructures/numa_ingress_egress_nzi.c",
+                                            CPPDEFINES = numa_structure_defines())
+
+#NZI = Non Zero Indicator
+nzi_infos = OrderedDict([
+        ('rgnzi',      {'defines'     : ['NZI_TYPE_ReaderGroups', rg_define],
+                        'deps'        : []}),
+        ('nienzi',      {'defines'     : ['NZI_TYPE_NUMAIngressEgressCounter'
+                                          ] + numa_structure_defines(),
+                        'deps'        : [object_numa_node_info,
+                                         object_numa_ingress_egress_nzi]})])
+
 lock_infos = OrderedDict([
         ('sdw',        {'source'      : 'simple_delayed_writers_lock',
                         'defines'     : [rg_define],
                         'exe_defines' : ['LOCK_TYPE_SimpleDelayedWritesLock', 
                                          rg_define],
                         'lock_deps'   : [],
-                        'other_deps'  : [object_multi_writers_queue, object_thread_id]}),
+                        'other_deps'  : [object_multi_writers_queue,
+                                         object_thread_id],
+                        'uses_nzi'     : True}),
         ('aer',        {'source'      : 'all_equal_rdx_lock',
                         'defines'     : [rg_define],
                         'exe_defines' : ['LOCK_TYPE_AllEqualRDXLock',
                                          rg_define],
                         'lock_deps'   : [],
-                        'other_deps'  : [object_multi_writers_queue, object_thread_id]}),
+                        'other_deps'  : [object_multi_writers_queue,
+                                         object_thread_id],
+                        'uses_nzi'    : True}),
         ('mcs',        {'source'      : 'mcs_lock',
                         'defines'     : [],
                         'exe_defines' : ['LOCK_TYPE_MCSLock'],
                         'lock_deps'   : [],
-                        'other_deps'  : []}),
+                        'other_deps'  : [],
+                        'uses_nzi'    : False}),
         ('drmcs',      {'source'      : 'wprw_lock',
                         'defines'     : ['LOCK_TYPE_MCSLock',
                                          'LOCK_TYPE_WPRW_MCSLock',
@@ -84,24 +104,28 @@ lock_infos = OrderedDict([
                                          'LOCK_TYPE_WPRW_MCSLock',
                                          rg_define],
                         'lock_deps'   : ['mcs'],
-                        'other_deps'  : [object_thread_id]}),
+                        'other_deps'  : [object_thread_id],
+                        'uses_nzi'     : True}),
         ('ticket',     {'source'      : 'ticket_lock',
                         'defines'     : [],
                         'exe_defines' : ['LOCK_TYPE_TicketLock'],
                         'lock_deps'   : [],
-                        'other_deps'  : []}),
+                        'other_deps'  : [],
+                        'uses_nzi'     : False}),
         ('aticket',    {'source'      : 'aticket_lock',
                         'defines'     : [array_size_define],
                         'exe_defines' : ['LOCK_TYPE_ATicketLock',
                                          array_size_define],
                         'lock_deps'   : [],
-                        'other_deps'  : []}),
+                        'other_deps'  : [],
+                        'uses_nzi'     : False}),
         ('cohort',     {'source'      : 'cohort_lock',
                         'defines'     : [array_size_define] + numa_structure_defines(),
                         'exe_defines' : ['LOCK_TYPE_CohortLock', 
                                          array_size_define] + numa_structure_defines(),
                         'lock_deps'   : ['ticket','aticket'],
-                        'other_deps'  : []}),
+                        'other_deps'  : [object_numa_node_info],
+                        'uses_nzi'     : False}),
         ('wprwcohort', {'source'      : 'wprw_lock',
                         'defines'     : ['LOCK_TYPE_CohortLock', 
                                          'LOCK_TYPE_WPRW_CohortLock', 
@@ -112,13 +136,16 @@ lock_infos = OrderedDict([
                                          array_size_define, 
                                          rg_define]  + numa_structure_defines(),
                         'lock_deps'   : ['cohort'],
-                        'other_deps'  : [object_thread_id]}),
+                        'other_deps'  : [object_numa_node_info,
+                                         object_thread_id],
+                        'uses_nzi'    : True}),
         ('fcrdx',        {'source'      : 'flat_comb_rdx_lock',
                           'defines'     : [rg_define],
                           'exe_defines' : ['LOCK_TYPE_FlatCombRDXLock',
                                            rg_define],
                           'lock_deps'   : [],
-                          'other_deps'  : [object_thread_id]})])
+                          'other_deps'  : [object_thread_id],
+                          'uses_nzi'     : True})])
 
 
 lock_specific_object_defs = OrderedDict([
@@ -134,7 +161,8 @@ lock_specific_object_defs = OrderedDict([
 benchmarks_scripts = ['compare_benchmarks.py',
                       'benchmark_lock.py',
                       'run_benchmarks_on_intel_i7.py',
-                      'run_benchmarks_on_sandy.py']
+                      'run_benchmarks_on_sandy.py',
+                      'run_benchmarks_on_amd_fx_6100.py']
 
 #Located in src/profile/
 profile_scripts = ['profile_perf.py']
@@ -143,27 +171,47 @@ profile_scripts = ['profile_perf.py']
 #Generate objects
 #################
 
-def create_lock_specific_object(lock_id, lock_specific_object_def_id):
+def create_lock_specific_object(lock_id, lock_specific_object_def_id, variant):
     definition = lock_specific_object_defs[lock_specific_object_def_id]
     return env.Object(
-        target = lock_specific_object_def_id + '_' + lock_id + '.o',
+        target = lock_specific_object_def_id + '_' + variant['id'] + '.o',
         source = definition['source'],
-        CPPDEFINES = lock_infos[lock_id]['exe_defines'] + definition['defines'])
+        CPPDEFINES = lock_infos[lock_id]['exe_defines'] + definition['defines'] + variant['defines'])
 
 for lock_id in lock_infos:
     lock_info = lock_infos[lock_id]
     other_deps = lock_info['other_deps']
     for lock_dep in lock_info['lock_deps']:
-        other_deps.append(lock_infos[lock_dep]['obj'])
+        other_deps.append(lock_infos[lock_dep]['variants'][0]['obj'])#Lock deps only alowed to have one variant
         other_deps.append(lock_infos[lock_dep]['other_deps'])
-    lock_info['obj'] = env.Object(
-        target = lock_info['source'] + lock_id + '.o',
-        source = 'src/lock/' + lock_info['source'] + '.c',
-        CPPDEFINES=lock_info['defines'])
+    if lock_info['uses_nzi']:
+        lock_info['variants'] = []
+        for nzi_id in nzi_infos:
+            nzi_info = nzi_infos[nzi_id]
+            variant_id = lock_id + '_' + nzi_id
+            lock_info['variants'].append(
+                {'id': variant_id,
+                 'obj':env.Object(
+                        target = lock_info['source'] + variant_id + '.o',
+                        source = 'src/lock/' + lock_info['source'] + '.c',
+                        CPPDEFINES=lock_info['defines'] + nzi_info['defines']),
+                 'deps': nzi_info['deps'],
+                 'defines': nzi_info['defines']})
+    else:
+        lock_info['variants'] = [
+            {'id': lock_id,
+             'obj': env.Object(
+                    target = lock_info['source'] + lock_id + '.o',
+                    source = 'src/lock/' + lock_info['source'] + '.c',
+                    CPPDEFINES=lock_info['defines']),
+             'deps': [],
+             'defines': []}]
     for lock_specific_object_def_id in lock_specific_object_defs:
-        lock_info[lock_specific_object_def_id] = ( 
-            create_lock_specific_object(lock_id,
-                                        lock_specific_object_def_id))
+        for variant in lock_info['variants']:
+            variant[lock_specific_object_def_id] = ( 
+                create_lock_specific_object(lock_id,
+                                            lock_specific_object_def_id,
+                                            variant))
 
 
 ##############
@@ -172,11 +220,13 @@ for lock_id in lock_infos:
 
 def create_lock_specific_program(lock_id, lock_specific_object_def_id):
     lock_info = lock_infos[lock_id]
-    return env.Program(
-        target = lock_specific_object_def_id + '_' + lock_id,
-        source = ([lock_info[lock_specific_object_def_id], 
-                  lock_info['obj']] + 
-                  lock_info['other_deps']))
+    for variant in lock_info['variants']:
+        env.Program(
+            target = lock_specific_object_def_id + '_' + variant['id'],
+            source = ([variant[lock_specific_object_def_id], 
+                       variant['obj']] + 
+                      lock_info['other_deps'] +
+                      variant['deps']))
 
 for lock_id in lock_infos:
     for lock_specific_object_def_id in lock_specific_object_defs:

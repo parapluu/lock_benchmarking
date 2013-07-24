@@ -18,7 +18,7 @@ command = [
     #use pinning to NUMA nodes (comma separated list)
     'no',
     #Benchmark number of threads (comma separated list)
-    '1,2,3,4,5,6,7,8',
+    '1,2,3,4,5,6',
     #Procentage reads (comma separated list)
     '0.0,0.25,0.5,0.8,0.9,0.95,0.99,1.0',
     #Seconds to run the benchmark (comma separated list)

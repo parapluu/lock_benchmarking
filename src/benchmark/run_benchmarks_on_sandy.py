@@ -14,7 +14,7 @@ command = [
     #benchmark prefixes (comma separated list)
     'rw_bench_clone',
     #locks to benchmark (comma separated list)
-    'aer,drmcs,cohort,wprwcohort',
+    'aer_rgnzi,drmcs_rgnzi,cohort,wprwcohort_rgnzi',
     #use pinning to NUMA nodes (comma separated list)
     'no,yes',
     #Benchmark number of threads (comma separated list)

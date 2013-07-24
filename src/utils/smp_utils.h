@@ -92,7 +92,4 @@ typedef union CacheLinePaddedPointerImpl {
     char padding[64];
 } CacheLinePaddedPointer;
 
-
-
-
 #endif

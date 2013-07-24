@@ -1,8 +1,6 @@
 #ifndef SUPPORT_MANY_NON_ZERO_INDICATOR_TYPES_H
 #define SUPPORT_MANY_NON_ZERO_INDICATOR_TYPES_H
 
-#define NZI_TYPE_ReaderGroups
-
 #ifdef NZI_TYPE_ReaderGroups
 //***********************************
 //ReaderGroups
@@ -11,6 +9,15 @@
 
 #define NZI_DATATYPE_NAME ReaderGroupsNZI
 #define NZI_FUN_PREFIX rgnzi
+
+#elif defined (NZI_TYPE_NUMAIngressEgressCounter)
+//***********************************
+//NUMA Ingress Egress Counter
+//***********************************
+#include "numa_ingress_egress_nzi.h"
+
+#define NZI_DATATYPE_NAME NUMAIngressEgress
+#define NZI_FUN_PREFIX nienzi
 
 #else
 

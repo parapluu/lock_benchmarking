@@ -71,6 +71,13 @@
 #define LOCK_DATATYPE_NAME FlatCombRDXLock
 #define LOCK_FUN_PREFIX fcrdxlock
 
+#elif defined (LOCK_TYPE_TTSRDXLock)
+
+#include "tts_rdx_lock.h"
+
+#define LOCK_DATATYPE_NAME TTSRDXLock
+#define LOCK_FUN_PREFIX ttsalock
+
 #else
 
 #define LOCK_DATATYPE_NAME NoLockDatatypeSpecified
