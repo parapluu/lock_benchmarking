@@ -56,6 +56,8 @@ array_size_define = ('ARRAY_SIZE',num_of_cores_str)
 
 object_multi_writers_queue = env.Object("src/datastructures/multi_writers_queue.c")
 
+object_opti_multi_writers_queue = env.Object("src/datastructures/opti_multi_writers_queue.c")
+
 object_thread_id = env.Object("src/utils/thread_identifier.c")
 
 object_numa_node_info = env.Object(source = "src/utils/numa_node_info_support.c",
@@ -95,7 +97,7 @@ lock_infos = OrderedDict([
                          'exe_defines': ['LOCK_TYPE_TTSRDXLock',
                                          rg_define],
                          'lock_deps'  : [],
-                         'other_deps' : [object_multi_writers_queue,
+                         'other_deps' : [object_opti_multi_writers_queue,
                                          object_thread_id],
                          'uses_nzi'   : True}),
         ('mcs',        {'source'      : 'mcs_lock',

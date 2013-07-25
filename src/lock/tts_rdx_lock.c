@@ -7,7 +7,7 @@
 #include "smp_utils.h"
 #include "thread_identifier.h"
 
-#define READ_PATIENCE_LIMIT 10000
+#define READ_PATIENCE_LIMIT 130000
  
 TTSRDXLock * ttsalock_create(void (*writer)(void *)){
     TTSRDXLock * lock = malloc(sizeof(TTSRDXLock));
@@ -19,7 +19,7 @@ void ttsalock_initialize(TTSRDXLock * lock, void (*writer)(void *)){
     lock->writer = writer;
     lock->lockWord.value = 0;
     NZI_INITIALIZE(&lock->nonZeroIndicator);
-    mwqueue_initialize(&lock->writeQueue);
+    omwqueue_initialize(&lock->writeQueue);
     __sync_synchronize();
 }
 
@@ -44,13 +44,13 @@ void waitUntilWriteBarrierOff(TTSRDXLock *lock) {
 void ttsalock_write(TTSRDXLock *lock, void * writeInfo) {
     bool currentlylocked;
     waitUntilWriteBarrierOff(lock);
-    while(!mwqueue_offer(&lock->writeQueue, writeInfo)){
+    while(!omwqueue_offer(&lock->writeQueue, writeInfo)){
         load_acq(currentlylocked, lock->lockWord.value);
         if(!currentlylocked){
             currentlylocked = __sync_lock_test_and_set(&lock->lockWord.value, true);
             if(!currentlylocked){
                 //Was not locked before operation
-                mwqueue_reset_fully_read(&lock->writeQueue);
+                omwqueue_reset_fully_read(&lock->writeQueue);
                 NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
                 lock->writer(writeInfo);
                 ttsalock_write_read_unlock(lock);
@@ -71,25 +71,16 @@ void ttsalock_write_read_lock(TTSRDXLock *lock) {
         currentlylocked = __sync_lock_test_and_set(&lock->lockWord.value, true);
         if(!currentlylocked){
             //Was not locked before operation
-            mwqueue_reset_fully_read(&lock->writeQueue);
+            omwqueue_reset_fully_read(&lock->writeQueue);
+            __sync_synchronize();//Flush
             NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
             return;
         }
     }
 }
 
-inline
-void flushWriteQueue(TTSRDXLock * lock, MWQueue * writeQueue){
-    void (*writer)(void *) = lock->writer;
-    void * element = mwqueue_take(writeQueue);
-    while(element != NULL) {
-        writer(element);
-        element = mwqueue_take(writeQueue);
-    }
-}
-
 void ttsalock_write_read_unlock(TTSRDXLock * lock) {
-    flushWriteQueue(lock, &lock->writeQueue);
+    omwqueue_flush(&lock->writeQueue, lock->writer);
     __sync_lock_release(&lock->lockWord.value);
 }
 

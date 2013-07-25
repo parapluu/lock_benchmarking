@@ -66,6 +66,16 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
+inline
+unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
+    unsigned long x = ACCESS_ONCE(*pointerToOldValue);
+    while (true) {
+        if (__sync_bool_compare_and_swap(pointerToOldValue, x, newValue))
+            return x;
+        x = ACCESS_ONCE(*pointerToOldValue);
+    }
+}
+
 typedef union CacheLinePaddedBoolImpl {
     bool value;
     char padding[64];
@@ -78,7 +88,7 @@ typedef union CacheLinePaddedIntImpl {
 
 
 typedef union CacheLinePaddedULongImpl {
-    long value;
+    unsigned long value;
     char padding[128];
 } CacheLinePaddedULong;
 
