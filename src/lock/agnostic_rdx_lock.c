@@ -3,36 +3,36 @@
 #include <pthread.h>
 #include <limits.h>
 #include <stdio.h>
-#include "tts_rdx_lock.h"
+#include "agnostic_rdx_lock.h"
 #include "smp_utils.h"
 #include "thread_identifier.h"
 
 #define READ_PATIENCE_LIMIT 130000
  
-TTSRDXLock * ttsalock_create(void (*writer)(void *)){
-    TTSRDXLock * lock = malloc(sizeof(TTSRDXLock));
-    ttsalock_initialize(lock, writer);
+AgnosticRDXLock * ardxlock_create(void (*writer)(void *)){
+    AgnosticRDXLock * lock = malloc(sizeof(AgnosticRDXLock));
+    ardxlock_initialize(lock, writer);
     return lock;
 }
 
-void ttsalock_initialize(TTSRDXLock * lock, void (*writer)(void *)){
+void ardxlock_initialize(AgnosticRDXLock * lock, void (*writer)(void *)){
     lock->writer = writer;
-    lock->lockWord.value = 0;
+    LOCK_INITIALIZE(&lock->lock, writer);
     NZI_INITIALIZE(&lock->nonZeroIndicator);
     omwqueue_initialize(&lock->writeQueue);
     __sync_synchronize();
 }
 
-void ttsalock_free(TTSRDXLock * lock){
+void ardxlock_free(AgnosticRDXLock * lock){
     free(lock);
 }
 
-void ttsalock_register_this_thread(){
+void ardxlock_register_this_thread(){
     assign_id_to_thread();
 }
 
 inline
-void waitUntilWriteBarrierOff(TTSRDXLock *lock) {
+void waitUntilWriteBarrierOff(AgnosticRDXLock *lock) {
     bool writeBarrierOn;
     load_acq(writeBarrierOn, lock->writeBarrier.value);    
     while(writeBarrierOn){
@@ -41,60 +41,46 @@ void waitUntilWriteBarrierOff(TTSRDXLock *lock) {
     }
 }
 
-void ttsalock_write(TTSRDXLock *lock, void * writeInfo) {
-    bool currentlylocked;
+void ardxlock_write(AgnosticRDXLock *lock, void * writeInfo) {
     waitUntilWriteBarrierOff(lock);
     while(!omwqueue_offer(&lock->writeQueue, writeInfo)){
-        load_acq(currentlylocked, lock->lockWord.value);
-        if(!currentlylocked){
-            currentlylocked = __sync_lock_test_and_set(&lock->lockWord.value, true);
-            if(!currentlylocked){
-                //Was not locked before operation
+        if(!LOCK_IS_LOCKED(&lock->lock)){
+            if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
                 omwqueue_reset_fully_read(&lock->writeQueue);
                 NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
                 lock->writer(writeInfo);
-                ttsalock_write_read_unlock(lock);
+                omwqueue_flush(&lock->writeQueue, lock->writer);
+                LOCK_WRITE_READ_UNLOCK(&lock->lock);
                 return;
             }
         }
-        //A __sync_synchronize(); or a pause instruction
+        //__sync_synchronize(); or a pause instruction
         //is probably necessary here to make it perform on
         //sandy
     }
 }
 
-void ttsalock_write_read_lock(TTSRDXLock *lock) {
-    bool currentlylocked;
+void ardxlock_write_read_lock(AgnosticRDXLock *lock) {
     waitUntilWriteBarrierOff(lock);
-    while(true){
-        load_acq(currentlylocked, lock->lockWord.value);
-        while(currentlylocked){
-            load_acq(currentlylocked, lock->lockWord.value);
-        }
-        currentlylocked = __sync_lock_test_and_set(&lock->lockWord.value, true);
-        if(!currentlylocked){
-            //Was not locked before operation
-            omwqueue_reset_fully_read(&lock->writeQueue);
-            __sync_synchronize();//Flush
-            NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
-            return;
-        }
-    }
+    LOCK_WRITE_READ_LOCK(&lock->lock);    
+    omwqueue_reset_fully_read(&lock->writeQueue);
+    __sync_synchronize();//Flush
+    NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
 }
 
-void ttsalock_write_read_unlock(TTSRDXLock * lock) {
+void ardxlock_write_read_unlock(AgnosticRDXLock * lock) {
     omwqueue_flush(&lock->writeQueue, lock->writer);
-    __sync_lock_release(&lock->lockWord.value);
+    LOCK_WRITE_READ_UNLOCK(&lock->lock);
 }
 
-void ttsalock_read_lock(TTSRDXLock *lock) {
+void ardxlock_read_lock(AgnosticRDXLock *lock) {
     bool bRaised = false; 
     int readPatience = 0;
  start:
     NZI_ARRIVE(&lock->nonZeroIndicator);
-    if(lock->lockWord.value){
+    if(LOCK_IS_LOCKED(&lock->lock)){
         NZI_DEPART(&lock->nonZeroIndicator);
-        while(lock->lockWord.value){
+        while(LOCK_IS_LOCKED(&lock->lock)){
             __sync_synchronize();//Pause (pause instruction might be better)
             if((readPatience == READ_PATIENCE_LIMIT) && !bRaised){
                 __sync_fetch_and_add(&lock->writeBarrier.value, 1);
@@ -109,6 +95,6 @@ void ttsalock_read_lock(TTSRDXLock *lock) {
     }
 }
 
-void ttsalock_read_unlock(TTSRDXLock *lock) {
+void ardxlock_read_unlock(AgnosticRDXLock *lock) {
     NZI_DEPART(&lock->nonZeroIndicator);
 }

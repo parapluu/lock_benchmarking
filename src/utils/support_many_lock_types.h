@@ -37,6 +37,25 @@
 #define LOCK_DATATYPE_NAME WPRWLock
 #define LOCK_FUN_PREFIX wprwlock
 
+
+#elif defined (LOCK_TYPE_AgnosticRDXLock)
+//***********************************
+//AgnosticRDXLock
+//***********************************
+#include "agnostic_rdx_lock.h"
+
+#define LOCK_DATATYPE_NAME AgnosticRDXLock
+#define LOCK_FUN_PREFIX ardxlock
+
+#elif defined (LOCK_TYPE_TATASLock)
+//***********************************
+//TATASLock
+//***********************************
+#include "tatas_lock.h"
+
+#define LOCK_DATATYPE_NAME TATASLock
+#define LOCK_FUN_PREFIX tataslock
+
 #elif defined (LOCK_TYPE_TicketLock)
 //***********************************
 //TicketLock
@@ -97,9 +116,11 @@
 #define LOCK_REGISTER_THIS_THREAD() MY_FUN(register_this_thread)()
 #define LOCK_WRITE(lock, writeInfo) MY_FUN(write)(lock, writeInfo)
 #define LOCK_WRITE_READ_LOCK(lock) MY_FUN(write_read_lock)(lock)
+#define LOCK_TRY_WRITE_READ_LOCK(lock) MY_FUN(try_write_read_lock)(lock)
 #define LOCK_WRITE_READ_UNLOCK(lock) MY_FUN(write_read_unlock)(lock)
 #define LOCK_READ_LOCK(lock) MY_FUN(read_lock)(lock)
 #define LOCK_READ_UNLOCK(lock) MY_FUN(read_unlock)(lock)
+#define LOCK_IS_LOCKED(lock) MY_FUN(is_locked)(lock)
 
 #endif
 

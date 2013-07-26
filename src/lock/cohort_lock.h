@@ -36,4 +36,37 @@ void cohortlock_write_read_unlock(CohortLock * lock);
 void cohortlock_read_lock(CohortLock *lock);
 void cohortlock_read_unlock(CohortLock *lock);
 
+inline
+bool cohortlock_is_locked(CohortLock *lock){
+    int inCounter;
+    int outCounter;
+    load_acq(inCounter, lock->globalLock.inCounter.value);
+    load_acq(outCounter, lock->globalLock.outCounter.value);
+    return (inCounter != outCounter);
+}
+
+extern __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
+
+inline
+bool cohortlock_is_local_locked(CohortLock *lock){
+    int inCounter;
+    int outCounter;
+    NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value]; 
+    load_acq(inCounter, localData->lock.inCounter.value);
+    load_acq(outCounter, localData->lock.outCounter.value);
+    return (inCounter != outCounter);
+}
+
+inline
+bool cohortlock_try_write_read_lock(CohortLock *lock) {
+    if(!cohortlock_is_locked(lock) && 
+       !cohortlock_is_local_locked(lock)){
+        cohortlock_write_read_lock(lock);
+        return true;
+    }else{
+        return false;
+    }
+
+}
+
 #endif
