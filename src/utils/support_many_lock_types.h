@@ -96,6 +96,14 @@
 
 #define LOCK_DATATYPE_NAME TTSRDXLock
 #define LOCK_FUN_PREFIX ttsalock
+#elif defined (LOCK_TYPE_CPPRDX)
+//***********************************
+//cpp RDX lock
+//***********************************
+#include "cpprdx.h"
+
+#define LOCK_DATATYPE_NAME CPPRDXLock
+#define LOCK_FUN_PREFIX cpprdx
 
 #else
 

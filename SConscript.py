@@ -14,11 +14,21 @@ from extract_numa_structure import numa_structure_defines
 Import('mode')
 std_cc_flags = ['-std=gnu99',
                 '-Wall',
+		'-fPIC',
                 '-pthread']
+std_cxx_flags = ['-std=c++11',
+		 '-Wall',
+		 '-Wextra',
+		 '-pedantic',
+		 '-fPIC',
+		 '-pthread']
 
 std_link_flags = ['-pthread']
 
 debug_flags = ['-O1',
+               '-g']
+
+debug_flags0 = ['-O0',
                '-g']
 
 optimization_flags = ['-O3']
@@ -27,16 +37,21 @@ profile_flags = ['-fno-omit-frame-pointer -O2']
 
 if(mode=='debug'):
     std_cc_flags = std_cc_flags + debug_flags
+    std_cxx_flags = std_cxx_flags + debug_flags0
     std_link_flags = std_link_flags + debug_flags
 elif(mode=='profile'):
     std_cc_flags = std_cc_flags + profile_flags
+    std_cxx_flags = std_cxx_flags + profile_flags
     std_link_flags = std_link_flags + profile_flags
 else:
     std_cc_flags = std_cc_flags + optimization_flags
+    std_cxx_flags = std_cxx_flags + optimization_flags
     std_link_flags = std_link_flags + optimization_flags
 
 env = Environment(
-    CCFLAGS = ' '.join(std_cc_flags),
+    CFLAGS = ' '.join(std_cc_flags),
+    CXXFLAGS = ' '.join(std_cxx_flags),
+    CXX = 'clang++',
     LINKFLAGS = ' '.join(std_link_flags),
     CPPPATH = ['.',
                'src/lock',
@@ -199,6 +214,12 @@ lock_infos = OrderedDict([
                           'other_deps'  : [object_thread_id],
                           'uses_nzi'     : True})])
 
+        ('cpprdx',     {'source'      : 'cpprdx',
+                        'defines'     : [],
+                        'exe_defines' : ['LOCK_TYPE_CPPRDX'],
+                        'lock_deps'   : [],
+                        'other_deps'  : []})])
+
 
 lock_specific_object_defs = OrderedDict([
         ('test',             {'source'      : 'src/tests/test_rdx_lock.c',
@@ -236,6 +257,9 @@ for lock_id in lock_infos:
     for lock_dep in lock_info['lock_deps']:
         other_deps.append(lock_infos[lock_dep]['variants'][0]['obj'])#Lock deps only alowed to have one variant
         other_deps.append(lock_infos[lock_dep]['other_deps'])
+    ext = '.c'
+    if lock_info['source'] == 'cpprdx':
+        ext = '.cpp'
     if lock_info['uses_nzi']:
         lock_info['variants'] = []
         for nzi_id in nzi_infos:
@@ -245,7 +269,7 @@ for lock_id in lock_infos:
                 {'id': variant_id,
                  'obj':env.Object(
                         target = lock_info['source'] + variant_id + '.o',
-                        source = 'src/lock/' + lock_info['source'] + '.c',
+                        source = 'src/lock/' + lock_info['source'] + ext,
                         CPPDEFINES=lock_info['defines'] + nzi_info['defines']),
                  'deps': nzi_info['deps'],
                  'defines': nzi_info['defines']})
@@ -254,7 +278,7 @@ for lock_id in lock_infos:
             {'id': lock_id,
              'obj': env.Object(
                     target = lock_info['source'] + lock_id + '.o',
-                    source = 'src/lock/' + lock_info['source'] + '.c',
+                    source = 'src/lock/' + lock_info['source'] + ext,
                     CPPDEFINES=lock_info['defines']),
              'deps': [],
              'defines': []}]
