@@ -57,7 +57,8 @@ def numa_structure_defines():
     number_of_numa_nodes, cpus_per_node, numaStructure = numa_structure()
     return [('NUMBER_OF_NUMA_NODES', str(number_of_numa_nodes)),
             ('NUMBER_OF_CPUS_PER_NODE', str(cpus_per_node)),
-            ('NUMA_STRUCTURE', numaStructure)]
+            ('NUMA_STRUCTURE', numaStructure),
+	    ('_GNU_SOURCE', '1')]
 
 number_of_numa_nodes, cpus_per_node, numaStructure = numa_structure()
     
