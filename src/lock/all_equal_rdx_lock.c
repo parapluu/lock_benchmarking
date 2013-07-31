@@ -68,13 +68,13 @@ bool tryReadSpinningInQueue(AllEqualRDXLock * lock, Node * myNode){
     return false;
 }
  
-AllEqualRDXLock * aerlock_create(void (*writer)(void *)){
+AllEqualRDXLock * aerlock_create(void (*writer)(void *, void **)){
     AllEqualRDXLock * lock = malloc(sizeof(AllEqualRDXLock));
     aerlock_initialize(lock, writer);
     return lock;
 }
 
-void aerlock_initialize(AllEqualRDXLock * lock, void (*writer)(void *)){
+void aerlock_initialize(AllEqualRDXLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     lock->endOfQueue.value = NULL;
     NZI_INITIALIZE(&lock->nonZeroIndicator);
@@ -102,7 +102,7 @@ void aerlock_write(AllEqualRDXLock *lock, void * writeInfo) {
     load_acq(currentNode, lock->endOfQueue.value);
     if(currentNode == NULL || ! mwqueue_offer(&currentNode->writeQueue, writeInfo)){
         aerlock_write_read_lock(lock);
-        lock->writer(writeInfo);
+        lock->writer(writeInfo, NULL);
         aerlock_write_read_unlock(lock);
     }
 }
@@ -132,10 +132,10 @@ void aerlock_write_read_lock(AllEqualRDXLock *lock) {
 }
 
 void flushWriteQueue(AllEqualRDXLock * lock, MWQueue * writeQueue){
-    void (*writer)(void *) = lock->writer;
+    void (*writer)(void *, void **) = lock->writer;
     void * element = mwqueue_take(writeQueue);
     while(element != NULL) {
-        writer(element);
+        writer(element, NULL);
         element = mwqueue_take(writeQueue);
     }
 }

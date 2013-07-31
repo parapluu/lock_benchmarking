@@ -9,13 +9,13 @@
 
 #define READ_PATIENCE_LIMIT 130000
  
-AgnosticRDXLock * ardxlock_create(void (*writer)(void *)){
+AgnosticRDXLock * ardxlock_create(void (*writer)(void *, void **)){
     AgnosticRDXLock * lock = malloc(sizeof(AgnosticRDXLock));
     ardxlock_initialize(lock, writer);
     return lock;
 }
 
-void ardxlock_initialize(AgnosticRDXLock * lock, void (*writer)(void *)){
+void ardxlock_initialize(AgnosticRDXLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     LOCK_INITIALIZE(&lock->lock, writer);
     NZI_INITIALIZE(&lock->nonZeroIndicator);
@@ -48,7 +48,7 @@ void ardxlock_write(AgnosticRDXLock *lock, void * writeInfo) {
             if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
                 omwqueue_reset_fully_read(&lock->writeQueue);
                 NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
-                lock->writer(writeInfo);
+                lock->writer(writeInfo, NULL);
                 omwqueue_flush(&lock->writeQueue, lock->writer);
                 LOCK_WRITE_READ_UNLOCK(&lock->lock);
                 return;

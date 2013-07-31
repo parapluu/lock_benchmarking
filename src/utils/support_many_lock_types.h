@@ -105,6 +105,20 @@
 #define LOCK_DATATYPE_NAME CPPRDXLock
 #define LOCK_FUN_PREFIX cpprdx
 
+#elif defined (LOCK_TYPE_AgnosticDXLock)
+
+#include "agnostic_dx_lock.h"
+
+#define LOCK_DATATYPE_NAME AgnosticDXLock
+#define LOCK_FUN_PREFIX adxlock
+
+#elif defined (LOCK_TYPE_AgnosticFDXLock)
+
+#include "agnostic_fdx_lock.h"
+
+#define LOCK_DATATYPE_NAME AgnosticFDXLock
+#define LOCK_FUN_PREFIX afdxlock
+
 #else
 
 #define LOCK_DATATYPE_NAME NoLockDatatypeSpecified

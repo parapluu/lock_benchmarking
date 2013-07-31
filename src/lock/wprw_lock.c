@@ -31,13 +31,13 @@ bool isWriteLocked(WPRWLock * lock){
 #endif
 }
  
-WPRWLock * wprwlock_create(void (*writer)(void *)){
+WPRWLock * wprwlock_create(void (*writer)(void *, void **)){
     WPRWLock * lock = malloc(sizeof(WPRWLock));
     wprwlock_initialize(lock, writer);
     return lock;
 }
 
-void wprwlock_initialize(WPRWLock * lock, void (*writer)(void *)){
+void wprwlock_initialize(WPRWLock * lock, void (*writer)(void *, void **)){
     LOCK_INITIALIZE(&lock->lock, writer);
     lock->writeBarrier.value = 0;
     NZI_INITIALIZE(&lock->nonZeroIndicator);
@@ -56,7 +56,7 @@ void wprwlock_register_this_thread(){
 
 void wprwlock_write(WPRWLock *lock, void * writeInfo) {
     wprwlock_write_read_lock(lock);
-    lock->lock.writer(writeInfo);
+    lock->lock.writer(writeInfo, NULL);
     wprwlock_write_read_unlock(lock);
 }
 

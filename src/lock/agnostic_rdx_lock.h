@@ -41,7 +41,7 @@
 typedef struct AgnosticRDXLockImpl {
     OptiMWQueue writeQueue;
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     char pad3[64];
     CacheLinePaddedInt writeBarrier;
@@ -52,9 +52,9 @@ typedef struct AgnosticRDXLockImpl {
 
 
 
-AgnosticRDXLock * ardxlock_create(void (*writer)(void *));
+AgnosticRDXLock * ardxlock_create(void (*writer)(void *, void **));
 void ardxlock_free(AgnosticRDXLock * lock);
-void ardxlock_initialize(AgnosticRDXLock * lock, void (*writer)(void *));
+void ardxlock_initialize(AgnosticRDXLock * lock, void (*writer)(void *, void **));
 void ardxlock_register_this_thread();
 void ardxlock_write(AgnosticRDXLock *lock, void * writeInfo);
 void ardxlock_write_read_lock(AgnosticRDXLock *lock);

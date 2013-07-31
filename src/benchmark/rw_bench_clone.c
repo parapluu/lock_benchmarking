@@ -137,7 +137,7 @@ __thread unsigned short * myXsubi;
 #define WORK_IN_NON_CRITICAL_SECTION WORK_IN_NON_CRITICAL_SECTION_1
 #endif
 
-void mixed_read_write_benchmark_writer(void * x){
+void mixed_read_write_benchmark_writer(void * x, void ** writeBackLocation){
     unsigned short * xsubi = myXsubi;
     for(int i = 0; i < imsw.iterationsSpentInWriteCriticalSection; i++){
         WORK_IN_WRITE_CRITICAL_SECTION;

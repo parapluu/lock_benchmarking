@@ -18,13 +18,13 @@ bool nodeHasWaitingThreads(TicketLock * localLock){
     return (localLockInCounter - localLockOutCounter) > 1;
 }
  
-CohortLock * cohortlock_create(void (*writer)(void *)){
+CohortLock * cohortlock_create(void (*writer)(void *, void **)){
     CohortLock * lock = malloc(sizeof(CohortLock));
     cohortlock_initialize(lock, writer);
     return lock;
 }
 
-void cohortlock_initialize(CohortLock * lock, void (*writer)(void *)){
+void cohortlock_initialize(CohortLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     aticketlock_initialize(&lock->globalLock, writer);
     for(int i = 0; i < NUMBER_OF_NUMA_NODES; i++){
@@ -53,7 +53,7 @@ void cohortlock_register_this_thread(){
 
 void cohortlock_write(CohortLock *lock, void * writeInfo) {
     cohortlock_write_read_lock(lock);
-    lock->writer(writeInfo);
+    lock->writer(writeInfo, NULL);
     cohortlock_write_read_unlock(lock);
 }
 

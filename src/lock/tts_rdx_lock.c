@@ -9,13 +9,13 @@
 
 #define READ_PATIENCE_LIMIT 130000
  
-TTSRDXLock * ttsalock_create(void (*writer)(void *)){
+TTSRDXLock * ttsalock_create(void (*writer)(void *, void **)){
     TTSRDXLock * lock = malloc(sizeof(TTSRDXLock));
     ttsalock_initialize(lock, writer);
     return lock;
 }
 
-void ttsalock_initialize(TTSRDXLock * lock, void (*writer)(void *)){
+void ttsalock_initialize(TTSRDXLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     lock->lockWord.value = 0;
     NZI_INITIALIZE(&lock->nonZeroIndicator);
@@ -52,7 +52,7 @@ void ttsalock_write(TTSRDXLock *lock, void * writeInfo) {
                 //Was not locked before operation
                 omwqueue_reset_fully_read(&lock->writeQueue);
                 NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
-                lock->writer(writeInfo);
+                lock->writer(writeInfo, NULL);
                 ttsalock_write_read_unlock(lock);
                 return;
             }

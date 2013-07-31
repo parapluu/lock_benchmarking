@@ -5,13 +5,13 @@
 #include "aticket_lock.h"
 
  
-ATicketLock * aticketlock_create(void (*writer)(void *)){
+ATicketLock * aticketlock_create(void (*writer)(void *, void **)){
     ATicketLock * lock = malloc(sizeof(ATicketLock));
     aticketlock_initialize(lock, writer);
     return lock;
 }
 
-void aticketlock_initialize(ATicketLock * lock, void (*writer)(void *)){
+void aticketlock_initialize(ATicketLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     lock->inCounter.value = 0;
     lock->outCounter.value = 0;
@@ -31,7 +31,7 @@ void aticketlock_register_this_thread(){
 
 void aticketlock_write(ATicketLock *lock, void * writeInfo) {
     aticketlock_write_read_lock(lock);
-    lock->writer(writeInfo);
+    lock->writer(writeInfo, NULL);
     aticketlock_write_read_unlock(lock);
 }
 

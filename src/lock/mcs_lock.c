@@ -16,13 +16,13 @@ MCSNode * get_and_set_node_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue)
     }
 }
  
-MCSLock * mcslock_create(void (*writer)(void *)){
+MCSLock * mcslock_create(void (*writer)(void *, void **)){
     MCSLock * lock = malloc(sizeof(MCSLock));
     mcslock_initialize(lock, writer);
     return lock;
 }
 
-void mcslock_initialize(MCSLock * lock, void (*writer)(void *)){
+void mcslock_initialize(MCSLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     lock->endOfQueue.value = NULL;
     __sync_synchronize();
@@ -40,7 +40,7 @@ void mcslock_register_this_thread(){
 
 void mcslock_write(MCSLock *lock, void * writeInfo) {
     mcslock_write_read_lock(lock);
-    lock->writer(writeInfo);
+    lock->writer(writeInfo, NULL);
     mcslock_write_read_unlock(lock);
     
 }

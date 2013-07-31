@@ -23,7 +23,7 @@ typedef struct NodeImpl {
 
 typedef struct SimpleDelayedWritesLockImpl {
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedNodePtr endOfQueue;
     NZI_DATATYPE_NAME nonZeroIndicator;
@@ -31,9 +31,9 @@ typedef struct SimpleDelayedWritesLockImpl {
 
 
 
-SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *));
+SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *, void **));
 void sdwlock_free(SimpleDelayedWritesLock * lock);
-void sdwlock_initialize(SimpleDelayedWritesLock * lock, void (*writer)(void *));
+void sdwlock_initialize(SimpleDelayedWritesLock * lock, void (*writer)(void *, void **));
 void sdwlock_register_this_thread();
 void sdwlock_write(SimpleDelayedWritesLock *lock, void * writeInfo);
 void sdwlock_write_read_lock(SimpleDelayedWritesLock *lock);

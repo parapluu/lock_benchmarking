@@ -6,13 +6,13 @@
 #include "tatas_lock.h"
 
 
-TATASLock * tataslock_create(void (*writer)(void *)){
+TATASLock * tataslock_create(void (*writer)(void *, void **)){
     TATASLock * lock = malloc(sizeof(TATASLock));
     tataslock_initialize(lock, writer);
     return lock;
 }
 
-void tataslock_initialize(TATASLock * lock, void (*writer)(void *)){
+void tataslock_initialize(TATASLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     lock->lockWord.value = 0;
     __sync_synchronize();
@@ -27,7 +27,7 @@ void tataslock_register_this_thread(){
 
 void tataslock_write(TATASLock *lock, void * writeInfo) {
     tataslock_write_read_lock(lock);
-    lock->writer(writeInfo);
+    lock->writer(writeInfo, NULL);
     tataslock_write_read_unlock(lock);
 }
 

@@ -9,16 +9,16 @@
 
 typedef struct TicketLockImpl {
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedInt inCounter;
     CacheLinePaddedInt outCounter;
 } TicketLock;
 
 
-TicketLock * ticketlock_create(void (*writer)(void *));
+TicketLock * ticketlock_create(void (*writer)(void *, void **));
 void ticketlock_free(TicketLock * lock);
-void ticketlock_initialize(TicketLock * lock, void (*writer)(void *));
+void ticketlock_initialize(TicketLock * lock, void (*writer)(void *, void **));
 void ticketlock_register_this_thread();
 void ticketlock_write(TicketLock *lock, void * writeInfo);
 void ticketlock_write_read_lock(TicketLock *lock);

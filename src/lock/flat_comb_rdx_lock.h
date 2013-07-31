@@ -41,12 +41,12 @@ typedef struct FlatCombRDXLockImpl {
     CacheLinePaddedInt writeBarrier;
     CacheLinePaddedFCMCSNodePtr endOfMCSQueue;
     CacheLinePaddedFlatCombNodePtr combine_list;
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     unsigned long combine_count;
 } FlatCombRDXLock;
 
-FlatCombRDXLock * fcrdxlock_create(void (*writer)(void *));
-void fcrdxlock_initialize(FlatCombRDXLock * lock, void (*writer)(void *));
+FlatCombRDXLock * fcrdxlock_create(void (*writer)(void *, void **));
+void fcrdxlock_initialize(FlatCombRDXLock * lock, void (*writer)(void *, void **));
 void fcrdxlock_free(FlatCombRDXLock * lock);
 
 void fcrdxlock_register_this_thread();

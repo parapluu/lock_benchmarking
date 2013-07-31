@@ -37,13 +37,13 @@ bool try_set_node_ptr(FCMCSNode ** pointerToOldValue, FCMCSNode * newValue){
     }     
 }
 
-FlatCombRDXLock * fcrdxlock_create(void (*writer)(void *)){
+FlatCombRDXLock * fcrdxlock_create(void (*writer)(void *, void **)){
     FlatCombRDXLock * lock = malloc(sizeof(FlatCombRDXLock));
     fcrdxlock_initialize(lock, writer);
     return lock;
 }
 
-void fcrdxlock_initialize(FlatCombRDXLock * lock, void (*writer)(void *)){
+void fcrdxlock_initialize(FlatCombRDXLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     lock->combine_count = 0;
     lock->combine_list.value = NULL;
@@ -117,7 +117,7 @@ void combine_requests(FlatCombRDXLock *lock){
     do{
         request_value = ACCESS_ONCE(current_elm->request);
         if(request_value != NULL){
-            lock->writer(current_elm->request);
+            lock->writer(current_elm->request, NULL);
             current_elm->request = NULL;
             current_elm->last_used = combine_count;
         }

@@ -20,16 +20,16 @@ typedef struct MCSNodeImpl {
 
 typedef struct MCSLockImpl {
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedMCSNodePtr endOfQueue;
 } MCSLock;
 
 
 
-MCSLock * mcslock_create(void (*writer)(void *));
+MCSLock * mcslock_create(void (*writer)(void *, void **));
 void mcslock_free(MCSLock * lock);
-void mcslock_initialize(MCSLock * lock, void (*writer)(void *));
+void mcslock_initialize(MCSLock * lock, void (*writer)(void *, void **));
 void mcslock_register_this_thread();
 void mcslock_write(MCSLock *lock, void * writeInfo);
 bool mcslock_write_read_lock(MCSLock *lock);

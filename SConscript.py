@@ -73,6 +73,8 @@ object_multi_writers_queue = env.Object("src/datastructures/multi_writers_queue.
 
 object_opti_multi_writers_queue = env.Object("src/datastructures/opti_multi_writers_queue.c")
 
+object_dr_multi_writers_queue = env.Object("src/datastructures/dr_multi_writers_queue.c")
+
 object_thread_id = env.Object("src/utils/thread_identifier.c")
 
 object_numa_node_info = env.Object(source = "src/utils/numa_node_info_support.c",
@@ -218,8 +220,25 @@ lock_infos = OrderedDict([
                         'exe_defines' : ['LOCK_TYPE_CPPRDX'],
                         'lock_deps'   : [],
                         'other_deps'  : [],
-			'uses_nzi'    : False})
-	])
+			'uses_nzi'    : False}),
+        ('tatasdx',   {'source'      : 'agnostic_dx_lock',
+                       'defines'     : ['LOCK_TYPE_TATASLock',
+                                        'LOCK_TYPE_WPRW_TATASLock'],
+                       'exe_defines' : ['LOCK_TYPE_AgnosticDXLock',
+                                        'LOCK_TYPE_WPRW_TATASLock'],
+                       'lock_deps'   : ['tatas'],
+                       'other_deps'  : [object_thread_id,
+                                        object_dr_multi_writers_queue],
+                       'uses_nzi'     : False}),
+        ('tatasfdx',   {'source'      : 'agnostic_fdx_lock',
+                        'defines'     : ['LOCK_TYPE_TATASLock',
+                                         'LOCK_TYPE_WPRW_TATASLock'],
+                        'exe_defines' : ['LOCK_TYPE_AgnosticFDXLock',
+                                         'LOCK_TYPE_WPRW_TATASLock'],
+                        'lock_deps'   : ['tatas'],
+                        'other_deps'  : [object_thread_id,
+                                         object_dr_multi_writers_queue],
+                        'uses_nzi'     : False})])
 
 
 lock_specific_object_defs = OrderedDict([

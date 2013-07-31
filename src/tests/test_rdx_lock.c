@@ -9,7 +9,7 @@
 
 CacheLinePaddedPointer test_write_var __attribute__((aligned(128)))  = {.value = NULL};
 
-void test_writer(void * pointer_increment){
+void test_writer(void * pointer_increment, void **writeBackLocation){
     void * inital_test_write_var = test_write_var.value;
     test_write_var.value = test_write_var.value + (long)pointer_increment;
     assert(test_write_var.value == (inital_test_write_var+(long)pointer_increment));
@@ -143,7 +143,7 @@ typedef struct LockCounterImpl {
 LockCounter lock_counters[NUMBER_OF_HARDWARE_THREADS] __attribute__((aligned(128)));
 
 
-void mixed_read_write_test_writer(void * lock_counter){
+void mixed_read_write_test_writer(void * lock_counter, void ** writeBackLocation){
     LockCounter * lc = (LockCounter *) lock_counter;
     lc->writesInFuture = ACCESS_ONCE(lc->writesInFuture) + 1;
     __sync_synchronize();
@@ -174,7 +174,7 @@ void *mixed_read_write_thread(void *x){
             //printf("X");
             lc->pendingWrite = true;
             LOCK_WRITE_READ_LOCK(lock);
-            mixed_read_write_test_writer(lc);
+            mixed_read_write_test_writer(lc, NULL);
             LOCK_WRITE_READ_UNLOCK(lock);
             lc->logicalWritesInFuture = lc->logicalWritesInFuture + 1;
         }else{
@@ -200,7 +200,6 @@ int test_parallel_mixed_read_write(double percentageReadParam, double percentage
     count.value = 0;
     pthread_t threads[NUMBER_OF_HARDWARE_THREADS];
     LOCK_DATATYPE_NAME * lock = LOCK_CREATE(&mixed_read_write_test_writer);
-    
     store_rel(test_phase_is_on.value, true);
     __sync_synchronize();
 

@@ -21,13 +21,13 @@ Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
 __thread Node myNode __attribute__((aligned(64)));
 
  
-SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *)){
+SimpleDelayedWritesLock * sdwlock_create(void (*writer)(void *, void **)){
     SimpleDelayedWritesLock * lock = malloc(sizeof(SimpleDelayedWritesLock));
     sdwlock_initialize(lock, writer);
     return lock;
 }
 
-void sdwlock_initialize(SimpleDelayedWritesLock * lock, void (*writer)(void *)){
+void sdwlock_initialize(SimpleDelayedWritesLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
     lock->endOfQueue.value = NULL;
     NZI_INITIALIZE(&lock->nonZeroIndicator);
@@ -53,7 +53,7 @@ void sdwlock_write(SimpleDelayedWritesLock *lock, void * writeInfo) {
     Node * currentNode = ACCESS_ONCE(lock->endOfQueue.value);
     if(currentNode == NULL || ! mwqueue_offer(&currentNode->writeQueue, writeInfo)){
         sdwlock_write_read_lock(lock);
-        lock->writer(writeInfo);
+        lock->writer(writeInfo, NULL);
         sdwlock_write_read_unlock(lock);
     }
 }
@@ -78,10 +78,10 @@ void sdwlock_write_read_lock(SimpleDelayedWritesLock *lock) {
 }
 
 void flushWriteQueue(SimpleDelayedWritesLock * lock, MWQueue * writeQueue){
-    void (*writer)(void *) = lock->writer;
+    void (*writer)(void *, void **) = lock->writer;
     void * element = mwqueue_take(writeQueue);
     while(element != NULL) {
-        writer(element);
+        writer(element, NULL);
         element = mwqueue_take(writeQueue);
     }
 }

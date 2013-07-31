@@ -8,7 +8,7 @@
 
 typedef struct TATASLockImpl {
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     char pad3[64];
     CacheLinePaddedBool lockWord;
@@ -17,9 +17,9 @@ typedef struct TATASLockImpl {
 
 
 
-TATASLock * tataslock_create(void (*writer)(void *));
+TATASLock * tataslock_create(void (*writer)(void *, void **));
 void tataslock_free(TATASLock * lock);
-void tataslock_initialize(TATASLock * lock, void (*writer)(void *));
+void tataslock_initialize(TATASLock * lock, void (*writer)(void *, void **));
 void tataslock_register_this_thread();
 void tataslock_write(TATASLock *lock, void * writeInfo);
 void tataslock_write_read_lock(TATASLock *lock);

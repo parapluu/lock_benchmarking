@@ -9,7 +9,7 @@
 
 typedef struct ATicketLockImpl {
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedInt inCounter;
     CacheLinePaddedInt outCounter;
@@ -17,9 +17,9 @@ typedef struct ATicketLockImpl {
 } ATicketLock;
 
 
-ATicketLock * aticketlock_create(void (*writer)(void *));
+ATicketLock * aticketlock_create(void (*writer)(void *, void **));
 void aticketlock_free(ATicketLock * lock);
-void aticketlock_initialize(ATicketLock * lock, void (*writer)(void *));
+void aticketlock_initialize(ATicketLock * lock, void (*writer)(void *, void **));
 void aticketlock_register_this_thread();
 void aticketlock_write(ATicketLock *lock, void * writeInfo);
 void aticketlock_write_read_lock(ATicketLock *lock);

@@ -21,7 +21,7 @@ OptiMWQueue * omwqueue_create();
 OptiMWQueue * omwqueue_initialize(OptiMWQueue * queue);
 void omwqueue_free(OptiMWQueue * queue);
 bool omwqueue_offer(OptiMWQueue * queue, entry e);
-void omwqueue_flush(OptiMWQueue * queue, void (*writer)(void *));
+void omwqueue_flush(OptiMWQueue * queue, void (*writer)(void *, void **));
 void omwqueue_reset_fully_read(OptiMWQueue * queue);
 
 #endif

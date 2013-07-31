@@ -37,9 +37,9 @@ typedef struct WPRWLockImpl {
     //    CacheLinePaddedInt readLocks[NUMBER_OF_READER_GROUPS];
 } WPRWLock;
 
-WPRWLock * wprwlock_create(void (*writer)(void *));
+WPRWLock * wprwlock_create(void (*writer)(void *, void **));
 void wprwlock_free(WPRWLock * lock);
-void wprwlock_initialize(WPRWLock * lock, void (*writer)(void *));
+void wprwlock_initialize(WPRWLock * lock, void (*writer)(void *, void **));
 void wprwlock_register_this_thread();
 void wprwlock_write(WPRWLock *lock, void * writeInfo);
 void wprwlock_write_read_lock(WPRWLock *lock);

@@ -19,16 +19,16 @@ typedef struct NodeLocalLockDataImpl {
 
 typedef struct CohortLockImpl {
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     ATicketLock globalLock;
     NodeLocalLockData localLockData[NUMBER_OF_NUMA_NODES];
 } CohortLock;
 
 
-CohortLock * cohortlock_create(void (*writer)(void *));
+CohortLock * cohortlock_create(void (*writer)(void *, void **));
 void cohortlock_free(CohortLock * lock);
-void cohortlock_initialize(CohortLock * lock, void (*writer)(void *));
+void cohortlock_initialize(CohortLock * lock, void (*writer)(void *, void **));
 void cohortlock_register_this_thread();
 void cohortlock_write(CohortLock *lock, void * writeInfo);
 bool cohortlock_write_read_lock(CohortLock *lock);

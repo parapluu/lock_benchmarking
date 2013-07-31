@@ -28,7 +28,7 @@ typedef struct NodeImpl {
 
 typedef struct AllEqualRDXLockImpl {
     char pad1[64];
-    void (*writer)(void *);
+    void (*writer)(void *, void **);
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedNodePtr endOfQueue;
     NZI_DATATYPE_NAME nonZeroIndicator;
@@ -36,9 +36,9 @@ typedef struct AllEqualRDXLockImpl {
 
 
 
-AllEqualRDXLock * aerlock_create(void (*writer)(void *));
+AllEqualRDXLock * aerlock_create(void (*writer)(void *, void **));
 void aerlock_free(AllEqualRDXLock * lock);
-void aerlock_initialize(AllEqualRDXLock * lock, void (*writer)(void *));
+void aerlock_initialize(AllEqualRDXLock * lock, void (*writer)(void *, void **));
 void aerlock_register_this_thread();
 void aerlock_write(AllEqualRDXLock *lock, void * writeInfo);
 void aerlock_write_read_lock(AllEqualRDXLock *lock);
