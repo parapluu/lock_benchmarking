@@ -212,13 +212,14 @@ lock_infos = OrderedDict([
                                            rg_define],
                           'lock_deps'   : [],
                           'other_deps'  : [object_thread_id],
-                          'uses_nzi'     : True})])
-
+                          'uses_nzi'     : True}),
         ('cpprdx',     {'source'      : 'cpprdx',
                         'defines'     : [],
                         'exe_defines' : ['LOCK_TYPE_CPPRDX'],
                         'lock_deps'   : [],
-                        'other_deps'  : []})])
+                        'other_deps'  : [],
+			'uses_nzi'    : False})
+	])
 
 
 lock_specific_object_defs = OrderedDict([
