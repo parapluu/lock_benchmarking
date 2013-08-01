@@ -12,6 +12,9 @@ from extract_numa_structure import numa_structure_defines
 ############
 
 Import('mode')
+
+use_cpp_locks = GetOption('cpp_locks')
+
 std_cc_flags = ['-std=gnu99',
                 '-Wall',
 		'-fPIC',
@@ -215,12 +218,6 @@ lock_infos = OrderedDict([
                           'lock_deps'   : [],
                           'other_deps'  : [object_thread_id],
                           'uses_nzi'     : True}),
-        ('cpprdx',     {'source'      : 'cpprdx',
-                        'defines'     : [],
-                        'exe_defines' : ['LOCK_TYPE_CPPRDX'],
-                        'lock_deps'   : [],
-                        'other_deps'  : [],
-			'uses_nzi'    : False}),
         ('tatasdx',   {'source'      : 'agnostic_dx_lock',
                        'defines'     : ['LOCK_TYPE_TATASLock',
                                         'LOCK_TYPE_WPRW_TATASLock'],
@@ -240,6 +237,15 @@ lock_infos = OrderedDict([
                                          object_dr_multi_writers_queue],
                         'uses_nzi'     : False})])
 
+cpp_lock_infos = [('cpprdx',     {'source'      : 'cpprdx',
+                                  'defines'     : [],
+                                  'exe_defines' : ['LOCK_TYPE_CPPRDX'],
+                                  'lock_deps'   : [],
+                                  'other_deps'  : [],
+                                  'uses_nzi'    : False})]
+
+if use_cpp_locks:
+    lock_infos.update(cpp_lock_infos)
 
 lock_specific_object_defs = OrderedDict([
         ('test',             {'source'      : 'src/tests/test_rdx_lock.c',

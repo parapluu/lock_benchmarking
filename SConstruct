@@ -1,4 +1,9 @@
 
+AddOption('--cpp_locks',
+          action='store_true',
+          dest='cpp_locks',
+          default=False)
+
 mode = 'release'
 
 SConscript('SConscript.py', variant_dir='bin', duplicate=0, exports='mode')
