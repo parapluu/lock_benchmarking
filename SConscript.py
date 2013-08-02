@@ -61,7 +61,8 @@ env = Environment(
                'src/datastructures',
                'src/tests',
                'src/utils',
-               'src/benchmark/skiplist'])
+               'src/benchmark/skiplist',
+               'src/benchmark/pairingheap'])
 
 num_of_cores_str=str(multiprocessing.cpu_count())
 
@@ -252,8 +253,10 @@ lock_specific_object_defs = OrderedDict([
                               'defines'     : [hardware_threads_define]}),
         ('rw_bench_clone',   {'source'      : 'src/benchmark/rw_bench_clone.c',
                              'defines'     : ['RW_BENCH_CLONE']}),
-        ('rw_bench_memtrans',{'source'      : 'src/benchmark/rw_bench_clone.c',
-                              'defines'     : ['RW_BENCH_MEM_TRANSFER']})])
+        #('rw_bench_memtrans',{'source'      : 'src/benchmark/rw_bench_clone.c',
+        #                     'defines'     : ['RW_BENCH_MEM_TRANSFER']}),
+        ('priority_queue_bench',   {'source'      : 'src/benchmark/priority_queue_bench.c',
+                                    'defines'     : ['PAIRING_HEAP']})])
 
 
 #Located in src/benchmark/
@@ -340,6 +343,10 @@ env.Program(
     target = 'test_multi_writers_queue',
     source = ['src/tests/test_multi_writers_queue.c',
               object_multi_writers_queue])
+
+env.Program(
+    target = 'test_pairingheap',
+    source = ['src/benchmark/pairingheap/test_pairingheap.c'])
 
 #############
 #Copy scripts

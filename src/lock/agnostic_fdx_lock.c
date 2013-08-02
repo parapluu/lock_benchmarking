@@ -115,9 +115,9 @@ void afdxlock_write_with_response(AgnosticFDXLock *lock,
     bool isActive;
     void (*request)(void *, void **);
     FlatCombNode * fcNode = myFCNode.value;
-    fcNode->request = delgateFun;
-    fcNode->data = data;
-    fcNode->responseLocation = responseLocation;
+    store_rel(fcNode->data, data);
+    store_rel(fcNode->responseLocation, responseLocation);
+    store_rel(fcNode->request, delgateFun);
     while(true){
         load_acq(isActive, fcNode->active.value);
         if(!isActive){

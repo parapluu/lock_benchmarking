@@ -36,6 +36,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     if(!closed){
         int index = __sync_fetch_and_add(&queue->elementCount.value, 1);
         if(index < MWQ_CAPACITY){
+            store_rel(queue->elements[index].responseLocation, e.responseLocation);
             store_rel(queue->elements[index].data, e.data);
             store_rel(queue->elements[index].request, e.request);
             __sync_synchronize();//Flush

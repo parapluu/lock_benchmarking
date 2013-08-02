@@ -1,6 +1,8 @@
 #ifndef SUPPORT_MANY_LOCK_TYPES_H
 #define SUPPORT_MANY_LOCK_TYPES_H
 
+#include <assert.h>
+
 #ifdef LOCK_TYPE_SimpleDelayedWritesLock
 //***********************************
 //SimpleDelayedWritesLock
@@ -109,6 +111,8 @@
 
 #include "agnostic_dx_lock.h"
 
+#define HAS_LOCK_DELEGATE_FUN 1
+#define HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN 1
 #define LOCK_DATATYPE_NAME AgnosticDXLock
 #define LOCK_FUN_PREFIX adxlock
 
@@ -116,6 +120,8 @@
 
 #include "agnostic_fdx_lock.h"
 
+#define HAS_LOCK_DELEGATE_FUN 1
+#define HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN 1
 #define LOCK_DATATYPE_NAME AgnosticFDXLock
 #define LOCK_FUN_PREFIX afdxlock
 
@@ -136,6 +142,25 @@
 #define LOCK_CREATE(writer) MY_FUN(create)(writer)
 #define LOCK_FREE(lock) MY_FUN(free)(lock)
 #define LOCK_REGISTER_THIS_THREAD() MY_FUN(register_this_thread)()
+#ifndef HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN
+void * MY_FUN(write_with_response_block)(LOCK_DATATYPE_NAME *lock, 
+                                         void (*delgateFun)(void *, void **), 
+                                         void * data){
+    printf("This lock does not support the write_with_response_block function yet\n");
+    assert(false);
+    return NULL;
+}
+#endif
+#define LOCK_DELEGATE_RETURN_BLOCK(lock, delegateFun, data) MY_FUN(write_with_response_block)(lock, delegateFun, data)
+#ifndef HAS_LOCK_DELEGATE_FUN
+void MY_FUN(delegate)(LOCK_DATATYPE_NAME *lock, 
+                      void (*delgateFun)(void *, void **), 
+                      void * data){
+    printf("This lock does not support the delegate function yet\n");
+    assert(false);
+}
+#endif
+#define LOCK_DELEGATE(lock, delegateFun, data) MY_FUN(delegate)(lock, delegateFun, data)
 #define LOCK_WRITE(lock, writeInfo) MY_FUN(write)(lock, writeInfo)
 #define LOCK_WRITE_READ_LOCK(lock) MY_FUN(write_read_lock)(lock)
 #define LOCK_TRY_WRITE_READ_LOCK(lock) MY_FUN(try_write_read_lock)(lock)
