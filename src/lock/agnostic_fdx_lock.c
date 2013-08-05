@@ -94,8 +94,12 @@ void combine_requests(AgnosticFDXLock *lock){
         if(requestFun != NULL){
             load_acq(data, current_elm->data);
             load_acq(responseLocation, current_elm->responseLocation);
-            requestFun(data, responseLocation);
+            //By setting the request field to NULL we promise to perform the
+            //request. This is thus the linearization point for delegate request.
+            //The linerarization point for response requests is when a non-NULL
+            //response is written to the response location.
             store_rel(current_elm->request, NULL);
+            requestFun(data, responseLocation);
             current_elm->last_used = combine_count;
         }
         current_elm = current_elm->next;
@@ -106,7 +110,7 @@ void combine_requests(AgnosticFDXLock *lock){
 }
 
 
-inline
+
 void afdxlock_write_with_response(AgnosticFDXLock *lock,
                                   void (*delgateFun)(void *, void **),
                                   void * data,
@@ -139,20 +143,39 @@ void afdxlock_write_with_response(AgnosticFDXLock *lock,
     }
 }
 
-inline
+
 void * afdxlock_write_with_response_block(AgnosticFDXLock *lock, 
                                           void  (*delgateFun)(void *, void **), 
                                           void * data){
     void * returnValue = NULL;
     void * currentValue = NULL;
-    afdxlock_write_with_response(lock, delgateFun, data, &returnValue);
-    load_acq(currentValue, returnValue);
-    while(currentValue == NULL){
-        load_acq(currentValue, returnValue);
-        __sync_synchronize();//Pause instruction might be better
+    int i, u;
+    bool isActive;
+    FlatCombNode * fcNode = myFCNode.value;
+    store_rel(fcNode->data, data);
+    store_rel(fcNode->responseLocation, &returnValue);
+    store_rel(fcNode->request, delgateFun);
+    while(true){
+        load_acq(isActive, fcNode->active.value);
+        if(!isActive){
+            activateFCNode(lock, fcNode);
+        }
+        for(u = 0; u < 4048; u++){
+            if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
+                combine_requests(lock);
+                LOCK_WRITE_READ_UNLOCK(&lock->lock);
+            }
+            for(i = 0; i < 32; i++){
+                load_acq(currentValue, returnValue);
+                if(currentValue != NULL){
+                    return currentValue;
+                }
+                __sync_synchronize();//TODO test if pause_instruction() is better
+            }
+        }
     }
     return currentValue;
-}
+} 
 
 inline
     void afdxlock_delegate(AgnosticFDXLock *lock, void (*delgateFun)(void *, void **), void * data) {
