@@ -50,7 +50,7 @@
 //Intel pause instruction
 #if __x86_64__
 #define pause_instruction() \
-  __asm volatile ("pause" ::: "memory")
+  __asm volatile ("pause")
 #else
 #define pause_instruction() \
   __sync_synchronize()

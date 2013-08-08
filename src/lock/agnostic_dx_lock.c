@@ -34,11 +34,12 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
                                  void (*delgateFun)(void *, void **), 
                                  void * data, 
                                  void ** responseLocation){
+    int counter = 0;
     DelegateRequestEntry e;
     e.request = delgateFun;
     e.data = data;
     e.responseLocation = responseLocation;
-    while(!drmvqueue_offer(&lock->writeQueue, e)){
+    do{
         if(!LOCK_IS_LOCKED(&lock->lock)){
             if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
                 drmvqueue_reset_fully_read(&lock->writeQueue);
@@ -47,24 +48,39 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
                 LOCK_WRITE_READ_UNLOCK(&lock->lock);
                 return;
             }
+        }else{
+            for(int i = 0; i < 7;i++){
+                if(drmvqueue_offer(&lock->writeQueue, e)){
+                    return;
+                }else{
+                    __sync_synchronize();
+                }
+            }
         }
-        //__sync_synchronize(); or a pause instruction
-        //is probably necessary here to make it perform on
-        //sandy
-    }
+        if((counter & 7) == 0){
+            sched_yield();
+        }
+        counter = counter + 1;
+    }while(true);
 }
 
 inline
 void * adxlock_write_with_response_block(AgnosticDXLock *lock, 
                                          void (*delgateFun)(void *, void **), 
                                          void * data){
+    int counter = 0;
     void * returnValue = NULL;
     void * currentValue = NULL;
     adxlock_write_with_response(lock, delgateFun, data, &returnValue);
     load_acq(currentValue, returnValue);
     while(currentValue == NULL){
+        if((counter & 7) == 0){
+            sched_yield();
+        }else{
+            __sync_synchronize();
+        }
+        counter = counter + 1;
         load_acq(currentValue, returnValue);
-        __sync_synchronize();//Pause instruction might be better
     }
     return currentValue;
 }

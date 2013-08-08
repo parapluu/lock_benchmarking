@@ -6,12 +6,12 @@
 #include "agnostic_fdx_lock.h"
 #include "smp_utils.h"
 #include "thread_identifier.h"
-
+#include <sched.h>
 #define STATICALLY_ALLOCATED_FLAT_COMB_NODES 128
 
-FlatCombNode statically_allocated_fc_nodes[STATICALLY_ALLOCATED_FLAT_COMB_NODES];
+FlatCombNode statically_allocated_fc_nodes[STATICALLY_ALLOCATED_FLAT_COMB_NODES] __attribute__((aligned(128)));
 
-__thread CacheLinePaddedFlatCombNodePtr myFCNode __attribute__((aligned(64)));
+__thread CacheLinePaddedFlatCombNodePtr myFCNode __attribute__((aligned(128)));
 
 AgnosticFDXLock * afdxlock_create(void (*writer)(void *, void **)){
     AgnosticFDXLock * lock = malloc(sizeof(AgnosticFDXLock));
@@ -80,6 +80,8 @@ void clean_combine_list(FlatCombNode * combine_list,
     }
 }
 
+#define REPEAT_COMBINE_TIMES 1
+
 void combine_requests(AgnosticFDXLock *lock){
     FlatCombNode * current_elm = ACCESS_ONCE(lock->combineList.value);
     void (*requestFun)(void *, void **);
@@ -92,6 +94,7 @@ void combine_requests(AgnosticFDXLock *lock){
     do{
         load_acq(requestFun, current_elm->request);
         if(requestFun != NULL){
+            current_elm->last_used = combine_count;
             load_acq(data, current_elm->data);
             load_acq(responseLocation, current_elm->responseLocation);
             //By setting the request field to NULL we promise to perform the
@@ -100,7 +103,6 @@ void combine_requests(AgnosticFDXLock *lock){
             //response is written to the response location.
             store_rel(current_elm->request, NULL);
             requestFun(data, responseLocation);
-            current_elm->last_used = combine_count;
         }
         current_elm = current_elm->next;
     }while(current_elm != NULL);
@@ -129,16 +131,22 @@ void afdxlock_write_with_response(AgnosticFDXLock *lock,
         }
         for(u = 0; u < 4048; u++){
             if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
-                combine_requests(lock);
+                for(int x = 0; x < REPEAT_COMBINE_TIMES; x++){
+                    combine_requests(lock);
+                }
                 LOCK_WRITE_READ_UNLOCK(&lock->lock);
             }
-            for(i = 0; i < 32; i++){
-                load_acq(request, fcNode->request);
-                if(request == NULL){
-                    return;
+            for(i = 0; i < 128; i++){
+                for(int x = 0; x < 1; x++){
+                    load_acq(request, fcNode->request);
+                    if(request == NULL){
+                        return;
+                    }
                 }
-                __sync_synchronize();//TODO test if pause_instruction() is better
+                pause_instruction();
+                //__sync_synchronize();//TODO test if pause_instruction() is better
             }
+            sched_yield();
         }
     }
 }
@@ -162,16 +170,22 @@ void * afdxlock_write_with_response_block(AgnosticFDXLock *lock,
         }
         for(u = 0; u < 4048; u++){
             if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
-                combine_requests(lock);
+                for(int x = 0; x < REPEAT_COMBINE_TIMES; x++){
+                    combine_requests(lock);
+                }
                 LOCK_WRITE_READ_UNLOCK(&lock->lock);
             }
-            for(i = 0; i < 32; i++){
-                load_acq(currentValue, returnValue);
-                if(currentValue != NULL){
-                    return currentValue;
+            for(i = 0; i < 128; i++){
+                for(int x = 0; x < 1; x++){
+                    load_acq(currentValue, returnValue);
+                    if(currentValue != NULL){
+                        return currentValue;
+                    }
                 }
+                //pause_instruction();
                 __sync_synchronize();//TODO test if pause_instruction() is better
             }
+            sched_yield();
         }
     }
     return currentValue;

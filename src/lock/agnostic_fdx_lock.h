@@ -45,15 +45,16 @@ typedef union CacheLinePaddedFlatCombNodePtrImpl {
 } CacheLinePaddedFlatCombNodePtr;
 
 typedef struct FlatCombNodeImpl {
-    char pad1[64];
+    char pad1[128];
     struct FlatCombNodeImpl * next;
-    void (*request)(void *, void **);
     void * data;
     void ** responseLocation;
     unsigned long last_used;
-    char pad2[64 - (4 * sizeof(void *) + sizeof(unsigned long)) % 64];
+    char pad2[128 - (3 * sizeof(void *) + sizeof(unsigned long)) % 64];
+    void (*request)(void *, void **);
+    char pad3[128 - (sizeof(void *)) % 64];
     CacheLinePaddedBool active;
-    char pad3[64];
+    char pad4[128];
 } FlatCombNode;
 
 
