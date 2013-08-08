@@ -142,24 +142,6 @@
 #define LOCK_CREATE(writer) MY_FUN(create)(writer)
 #define LOCK_FREE(lock) MY_FUN(free)(lock)
 #define LOCK_REGISTER_THIS_THREAD() MY_FUN(register_this_thread)()
-#ifndef HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN
-void * MY_FUN(write_with_response_block)(LOCK_DATATYPE_NAME *lock, 
-                                         void (*delgateFun)(void *, void **), 
-                                         void * data){
-    printf("This lock does not support the write_with_response_block function yet\n");
-    assert(false);
-    return NULL;
-}
-#endif
-#define LOCK_DELEGATE_RETURN_BLOCK(lock, delegateFun, data) MY_FUN(write_with_response_block)(lock, delegateFun, data)
-#ifndef HAS_LOCK_DELEGATE_FUN
-void MY_FUN(delegate)(LOCK_DATATYPE_NAME *lock, 
-                      void (*delgateFun)(void *, void **), 
-                      void * data){
-    printf("This lock does not support the delegate function yet\n");
-    assert(false);
-}
-#endif
 #define LOCK_DELEGATE(lock, delegateFun, data) MY_FUN(delegate)(lock, delegateFun, data)
 #define LOCK_WRITE(lock, writeInfo) MY_FUN(write)(lock, writeInfo)
 #define LOCK_WRITE_READ_LOCK(lock) MY_FUN(write_read_lock)(lock)
@@ -168,6 +150,32 @@ void MY_FUN(delegate)(LOCK_DATATYPE_NAME *lock,
 #define LOCK_READ_LOCK(lock) MY_FUN(read_lock)(lock)
 #define LOCK_READ_UNLOCK(lock) MY_FUN(read_unlock)(lock)
 #define LOCK_IS_LOCKED(lock) MY_FUN(is_locked)(lock)
+
+
+#ifndef HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN
+inline
+void * MY_FUN(write_with_response_block)(LOCK_DATATYPE_NAME *lock, 
+                                         void (*delgateFun)(void *, void **), 
+                                         void * data){
+    void * responseValue = NULL;
+    LOCK_WRITE_READ_LOCK(lock);
+    delgateFun(data, &responseValue);
+    LOCK_WRITE_READ_UNLOCK(lock);
+    return responseValue;
+}
+#endif
+#define LOCK_DELEGATE_RETURN_BLOCK(lock, delegateFun, data) MY_FUN(write_with_response_block)(lock, delegateFun, data)
+#ifndef HAS_LOCK_DELEGATE_FUN
+inline
+void MY_FUN(delegate)(LOCK_DATATYPE_NAME *lock, 
+                      void (*delgateFun)(void *, void **), 
+                      void * data){
+    LOCK_WRITE_READ_LOCK(lock);
+    delgateFun(data, NULL);
+    LOCK_WRITE_READ_UNLOCK(lock);
+}
+#endif
+
 
 #endif
 
