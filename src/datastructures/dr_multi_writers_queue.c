@@ -3,6 +3,26 @@
 #include "dr_multi_writers_queue.h"
 #include "smp_utils.h"
 
+inline 
+int CAS_fetch_and_add(int * valueAddress, int incrementWith){
+    int oldValCAS;
+    int oldVal = ACCESS_ONCE(*valueAddress);
+    while(true){
+        oldValCAS = __sync_val_compare_and_swap(valueAddress, oldVal, oldVal + incrementWith);
+        if(oldVal == oldValCAS){
+            return oldVal;
+        }else{
+            oldVal = oldValCAS;
+        }
+    }
+}
+
+#ifdef CAS_FETCH_AND_ADD
+#define FETCH_AND_ADD(valueAddress, incrementWith) CAS_fetch_and_add(valueAddress, incrementWith) 
+#else
+#define FETCH_AND_ADD(valueAddress, incrementWith) __sync_fetch_and_add(valueAddress, incrementWith) 
+#endif 
+
 inline
 unsigned long min(unsigned long i1, unsigned long i2){
     return i1 < i2 ? i1 : i2;
@@ -34,7 +54,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
     if(!closed){
-        int index = __sync_fetch_and_add(&queue->elementCount.value, 1);
+        int index = FETCH_AND_ADD(&queue->elementCount.value, 1);
         if(index < MWQ_CAPACITY){
             store_rel(queue->elements[index].responseLocation, e.responseLocation);
             store_rel(queue->elements[index].data, e.data);

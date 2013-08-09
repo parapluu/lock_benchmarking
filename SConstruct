@@ -4,6 +4,11 @@ AddOption('--cpp_locks',
           dest='cpp_locks',
           default=False)
 
+AddOption('--use_cas_fetch_and_add',
+          action='store_true',
+          dest='use_cas_fetch_and_add',
+          default=False)
+
 mode = 'release'
 
 SConscript('SConscript.py', variant_dir='bin', duplicate=0, exports='mode')

@@ -15,6 +15,8 @@ Import('mode')
 
 use_cpp_locks = GetOption('cpp_locks')
 
+use_cas_fetch_and_add = GetOption('use_cas_fetch_and_add')
+
 std_cc_flags = ['-std=gnu99',
                 '-Wall',
 		'-fPIC',
@@ -77,7 +79,9 @@ object_multi_writers_queue = env.Object("src/datastructures/multi_writers_queue.
 
 object_opti_multi_writers_queue = env.Object("src/datastructures/opti_multi_writers_queue.c")
 
-object_dr_multi_writers_queue = env.Object("src/datastructures/dr_multi_writers_queue.c")
+object_dr_multi_writers_queue = (
+    env.Object("src/datastructures/dr_multi_writers_queue.c",
+               CPPDEFINES = (['CAS_FETCH_AND_ADD'] if use_cas_fetch_and_add else [])))
 
 object_thread_id = env.Object("src/utils/thread_identifier.c")
 
