@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "multi_writers_queue.h"
+#include "datastructures/multi_writers_queue.h"
 #include "test_framework.h"
 
 

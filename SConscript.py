@@ -59,12 +59,7 @@ env = Environment(
     CXX = 'clang++',
     LINKFLAGS = ' '.join(std_link_flags),
     CPPPATH = ['.',
-               'src/lock',
-               'src/datastructures',
-               'src/tests',
-               'src/utils',
-               'src/benchmark/skiplist',
-               'src/benchmark/pairingheap'])
+               'src'])
 
 num_of_cores_str=str(multiprocessing.cpu_count())
 

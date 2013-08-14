@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 #include "common_lock_constants.h"
 #include "ticket_lock.h"
 #include "aticket_lock.h"

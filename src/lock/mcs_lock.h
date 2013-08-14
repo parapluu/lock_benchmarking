@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 #include "common_lock_constants.h"
 
 #ifndef MCS_LOCK_H

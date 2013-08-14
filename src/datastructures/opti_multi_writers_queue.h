@@ -1,5 +1,5 @@
 #include <stdbool.h>
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 
 #ifndef MULTI_WRITES_QUEUE_H
 #define MULTI_WRITES_QUEUE_H

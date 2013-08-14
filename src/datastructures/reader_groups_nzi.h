@@ -1,6 +1,6 @@
 #include <stdbool.h>
-#include "smp_utils.h"
-#include "thread_identifier.h"
+#include "utils/smp_utils.h"
+#include "utils/thread_identifier.h"
 
 #ifndef READER_GROUPS_NZI_H
 #define READER_GROUPS_NZI_H

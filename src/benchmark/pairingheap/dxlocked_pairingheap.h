@@ -1,5 +1,5 @@
 #include "pairingheap.h"
-#include "support_many_lock_types.h"
+#include "utils/support_many_lock_types.h"
 
 #ifndef DXLOCKED_PAIRINGHEAP_H
 #define DXLOCKED_PAIRINGHEAP_H

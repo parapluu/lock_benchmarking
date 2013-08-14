@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "multi_writers_queue.h"
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 
 inline
 int min(int i1, int i2){

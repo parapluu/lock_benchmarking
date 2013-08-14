@@ -4,8 +4,8 @@
 #include <limits.h>
 #include <stdio.h>
 #include "agnostic_fdx_lock.h"
-#include "smp_utils.h"
-#include "thread_identifier.h"
+#include "utils/smp_utils.h"
+#include "utils/thread_identifier.h"
 #include <sched.h>
 #define STATICALLY_ALLOCATED_FLAT_COMB_NODES 128
 

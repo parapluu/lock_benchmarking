@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "thread_identifier.h"
+#include "utils/thread_identifier.h"
 #include "simple_delayed_writers_lock.h"
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 
 
 inline

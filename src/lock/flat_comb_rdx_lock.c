@@ -1,6 +1,6 @@
 #include "flat_comb_rdx_lock.h"
 #include <stdlib.h>
-#include "thread_identifier.h"
+#include "utils/thread_identifier.h"
 
 #define READ_PATIENCE_LIMIT 1000
 

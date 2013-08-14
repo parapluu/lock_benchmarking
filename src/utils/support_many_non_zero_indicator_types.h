@@ -5,7 +5,7 @@
 //***********************************
 //ReaderGroups
 //***********************************
-#include "reader_groups_nzi.h"
+#include "datastructures/reader_groups_nzi.h"
 
 #define NZI_DATATYPE_NAME ReaderGroupsNZI
 #define NZI_FUN_PREFIX rgnzi
@@ -14,7 +14,7 @@
 //***********************************
 //NUMA Ingress Egress Counter
 //***********************************
-#include "numa_ingress_egress_nzi.h"
+#include "datastructures/numa_ingress_egress_nzi.h"
 
 #define NZI_DATATYPE_NAME NUMAIngressEgress
 #define NZI_FUN_PREFIX nienzi

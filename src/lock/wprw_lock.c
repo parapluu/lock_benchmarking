@@ -5,9 +5,9 @@
 #include <assert.h>
 
 #include "wprw_lock.h"
-#include "support_many_lock_types.h"
-#include "smp_utils.h"
-#include "thread_identifier.h"
+#include "utils/support_many_lock_types.h"
+#include "utils/smp_utils.h"
+#include "utils/thread_identifier.h"
 
 
 #define READ_PATIENCE_LIMIT 1000

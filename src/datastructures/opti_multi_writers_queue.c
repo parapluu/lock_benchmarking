@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "opti_multi_writers_queue.h"
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 
 inline
 unsigned long min(unsigned long i1, unsigned long i2){

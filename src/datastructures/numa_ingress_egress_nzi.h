@@ -1,6 +1,6 @@
 #include <stdbool.h>
-#include "smp_utils.h"
-#include "numa_node_info_support.h"
+#include "utils/smp_utils.h"
+#include "utils/numa_node_info_support.h"
 
 #ifndef READER_GROUPS_NZI_H
 #define READER_GROUPS_NZI_H

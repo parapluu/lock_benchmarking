@@ -1,8 +1,8 @@
 #include <stdbool.h>
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 #include "common_lock_constants.h"
-#include "support_many_lock_types.h"
-#include "support_many_non_zero_indicator_types.h"
+#include "utils/support_many_lock_types.h"
+#include "utils/support_many_non_zero_indicator_types.h"
 
 #ifndef WPRW_LOCK_H
 #define WPRW_LOCK_H

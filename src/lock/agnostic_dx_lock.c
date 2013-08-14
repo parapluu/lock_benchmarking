@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include "agnostic_dx_lock.h"
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 
 #define READ_PATIENCE_LIMIT 130000
  

@@ -1,6 +1,6 @@
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 #include <stdbool.h>
-#include "support_many_non_zero_indicator_types.h"
+#include "utils/support_many_non_zero_indicator_types.h"
 
 #ifndef ALL_EQUAL_RDX_LOCK_H
 #define ALL_EQUAL_RDX_LOCK_H

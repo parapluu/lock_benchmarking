@@ -6,11 +6,11 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <limits.h>
-#include "smp_utils.h"
-#include "skiplist.h"
-#include "smp_utils.h"
-#include "support_many_lock_types.h"
-#include "dxlocked_pairingheap.h"
+#include "utils/smp_utils.h"
+#include "benchmark/skiplist/skiplist.h"
+#include "utils/smp_utils.h"
+#include "utils/support_many_lock_types.h"
+#include "benchmark/pairingheap/dxlocked_pairingheap.h"
 
 //Should be power of 2
 #define NUMBER_OF_ELEMENTS_IN_ARRAYS 64

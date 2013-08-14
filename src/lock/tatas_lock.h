@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include "common_lock_constants.h"
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 
 #ifndef TATAS_LOCK_H
 #define TATAS_LOCK_H

@@ -1,7 +1,7 @@
 #include <stdbool.h>
-#include "opti_multi_writers_queue.h"
+#include "datastructures/opti_multi_writers_queue.h"
 #include "common_lock_constants.h"
-#include "support_many_non_zero_indicator_types.h"
+#include "utils/support_many_non_zero_indicator_types.h"
 
 #ifndef TTS_RDX_LOCK_H
 #define TTS_RDX_LOCK_H

@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <sched.h>
 #include "cohort_lock.h"
-#include "numa_node_info_support.h"
+#include "utils/numa_node_info_support.h"
 
 __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
 

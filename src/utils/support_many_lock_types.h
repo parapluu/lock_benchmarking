@@ -7,7 +7,7 @@
 //***********************************
 //SimpleDelayedWritesLock
 //***********************************
-#include "simple_delayed_writers_lock.h"
+#include "lock/simple_delayed_writers_lock.h"
 
 #define LOCK_DATATYPE_NAME SimpleDelayedWritesLock
 #define LOCK_FUN_PREFIX sdwlock
@@ -16,7 +16,7 @@
 //***********************************
 //AllEqualRDXLock
 //***********************************
-#include "all_equal_rdx_lock.h"
+#include "lock/all_equal_rdx_lock.h"
 
 #define LOCK_DATATYPE_NAME AllEqualRDXLock
 #define LOCK_FUN_PREFIX aerlock
@@ -25,7 +25,7 @@
 //***********************************
 //MCSLock
 //***********************************
-#include "mcs_lock.h"
+#include "lock/mcs_lock.h"
 
 #define LOCK_DATATYPE_NAME MCSLock
 #define LOCK_FUN_PREFIX mcslock
@@ -34,7 +34,7 @@
 //***********************************
 //WPRWLock
 //***********************************
-#include "wprw_lock.h"
+#include "lock/wprw_lock.h"
 
 #define LOCK_DATATYPE_NAME WPRWLock
 #define LOCK_FUN_PREFIX wprwlock
@@ -44,7 +44,7 @@
 //***********************************
 //AgnosticRDXLock
 //***********************************
-#include "agnostic_rdx_lock.h"
+#include "lock/agnostic_rdx_lock.h"
 
 #define LOCK_DATATYPE_NAME AgnosticRDXLock
 #define LOCK_FUN_PREFIX ardxlock
@@ -53,7 +53,7 @@
 //***********************************
 //TATASLock
 //***********************************
-#include "tatas_lock.h"
+#include "lock/tatas_lock.h"
 
 #define LOCK_DATATYPE_NAME TATASLock
 #define LOCK_FUN_PREFIX tataslock
@@ -62,7 +62,7 @@
 //***********************************
 //TicketLock
 //***********************************
-#include "ticket_lock.h"
+#include "lock/ticket_lock.h"
 
 #define LOCK_DATATYPE_NAME TicketLock
 #define LOCK_FUN_PREFIX ticketlock
@@ -71,7 +71,7 @@
 //***********************************
 //Array TicketLock
 //***********************************
-#include "aticket_lock.h"
+#include "lock/aticket_lock.h"
 
 #define LOCK_DATATYPE_NAME ATicketLock
 #define LOCK_FUN_PREFIX aticketlock
@@ -80,21 +80,21 @@
 //***********************************
 //CohortLock
 //***********************************
-#include "cohort_lock.h"
+#include "lock/cohort_lock.h"
 
 #define LOCK_DATATYPE_NAME CohortLock
 #define LOCK_FUN_PREFIX cohortlock
 
 #elif defined (LOCK_TYPE_FlatCombRDXLock)
 
-#include "flat_comb_rdx_lock.h"
+#include "lock/flat_comb_rdx_lock.h"
 
 #define LOCK_DATATYPE_NAME FlatCombRDXLock
 #define LOCK_FUN_PREFIX fcrdxlock
 
 #elif defined (LOCK_TYPE_TTSRDXLock)
 
-#include "tts_rdx_lock.h"
+#include "lock/tts_rdx_lock.h"
 
 #define LOCK_DATATYPE_NAME TTSRDXLock
 #define LOCK_FUN_PREFIX ttsalock
@@ -102,14 +102,14 @@
 //***********************************
 //cpp RDX lock
 //***********************************
-#include "cpprdx.h"
+#include "lock/cpprdx.h"
 
 #define LOCK_DATATYPE_NAME CPPRDXLock
 #define LOCK_FUN_PREFIX cpprdx
 
 #elif defined (LOCK_TYPE_AgnosticDXLock)
 
-#include "agnostic_dx_lock.h"
+#include "lock/agnostic_dx_lock.h"
 
 #define HAS_LOCK_DELEGATE_FUN 1
 #define HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN 1
@@ -118,7 +118,7 @@
 
 #elif defined (LOCK_TYPE_AgnosticFDXLock)
 
-#include "agnostic_fdx_lock.h"
+#include "lock/agnostic_fdx_lock.h"
 
 #define HAS_LOCK_DELEGATE_FUN 1
 #define HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN 1

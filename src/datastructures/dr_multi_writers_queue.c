@@ -1,7 +1,7 @@
 #include <stdlib.h>
 
 #include "dr_multi_writers_queue.h"
-#include "smp_utils.h"
+#include "utils/smp_utils.h"
 
 inline 
 int CAS_fetch_and_add(int * valueAddress, int incrementWith){

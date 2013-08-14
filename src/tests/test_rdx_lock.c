@@ -3,8 +3,8 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "test_framework.h"
-#include "smp_utils.h"
-#include "support_many_lock_types.h"
+#include "utils/smp_utils.h"
+#include "utils/support_many_lock_types.h"
 
 
 CacheLinePaddedPointer test_write_var __attribute__((aligned(128)))  = {.value = NULL};
