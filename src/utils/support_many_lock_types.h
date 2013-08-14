@@ -126,9 +126,21 @@
 #define LOCK_FUN_PREFIX afdxlock
 
 #else
+#ifdef LOCK_DUMMY_FUNCTIONS
 
 #define LOCK_DATATYPE_NAME NoLockDatatypeSpecified
 #define LOCK_FUN_PREFIX no_such_lock_type_prefix
+
+typedef struct {} NoLockDatatypeSpecified;
+extern void no_such_lock_type_prefix_write_read_lock(LOCK_DATATYPE_NAME* lock);
+extern void no_such_lock_type_prefix_write_read_unlock(LOCK_DATATYPE_NAME* lock);
+extern void no_such_lock_type_prefix_read_lock(LOCK_DATATYPE_NAME* lock);
+extern void no_such_lock_type_prefix_read_unlock(LOCK_DATATYPE_NAME* lock);
+extern void* no_such_lock_type_prefix_write_with_response_block(LOCK_DATATYPE_NAME* lock, void (*delgateFun)(void *, void **), void * data); 
+extern LOCK_DATATYPE_NAME* no_such_lock_type_prefix_create(void (*fun)(void*, void**));
+extern void no_such_lock_type_prefix_free(LOCK_DATATYPE_NAME* lock);
+
+#endif /* LOCK_DUMMY_FUNTIONS */
 
 #endif
 
