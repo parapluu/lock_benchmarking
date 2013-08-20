@@ -17,9 +17,10 @@ AgnosticRDXLock * ardxlock_create(void (*writer)(void *, void **)){
 
 void ardxlock_initialize(AgnosticRDXLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
+    lock->writeBarrier.value = false;
     LOCK_INITIALIZE(&lock->lock, writer);
     NZI_INITIALIZE(&lock->nonZeroIndicator);
-    omwqueue_initialize(&lock->writeQueue);
+    drmvqueue_initialize(&lock->writeQueue);
     __sync_synchronize();
 }
 
@@ -41,15 +42,20 @@ void waitUntilWriteBarrierOff(AgnosticRDXLock *lock) {
     }
 }
 
-void ardxlock_write(AgnosticRDXLock *lock, void * writeInfo) {
+void ardxlock_write_with_response(AgnosticRDXLock *lock, void (*delgateFun)(void *, void **), void * data, void ** responseLocation) {
     waitUntilWriteBarrierOff(lock);
-    while(!omwqueue_offer(&lock->writeQueue, writeInfo)){
+    int counter = 0;
+    DelegateRequestEntry e;
+    e.request = delgateFun;
+    e.data = data;
+    e.responseLocation = responseLocation;
+    while(!drmvqueue_offer(&lock->writeQueue, e)){
         if(!LOCK_IS_LOCKED(&lock->lock)){
             if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
-                omwqueue_reset_fully_read(&lock->writeQueue);
+                drmvqueue_reset_fully_read(&lock->writeQueue);
                 NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
-                lock->writer(writeInfo, NULL);
-                omwqueue_flush(&lock->writeQueue, lock->writer);
+                delgateFun(data, responseLocation);
+                drmvqueue_flush(&lock->writeQueue);
                 LOCK_WRITE_READ_UNLOCK(&lock->lock);
                 return;
             }
@@ -60,16 +66,23 @@ void ardxlock_write(AgnosticRDXLock *lock, void * writeInfo) {
     }
 }
 
+void ardxlock_delegate(AgnosticRDXLock *lock, void (*delgateFun)(void *, void**), void * data) {
+	ardxlock_write_with_response(lock, delgateFun, data, NULL);
+}
+
+void ardxlock_write(AgnosticRDXLock *lock, void * writeInfo) {
+	ardxlock_delegate(lock, lock->writer, writeInfo);
+}
 void ardxlock_write_read_lock(AgnosticRDXLock *lock) {
     waitUntilWriteBarrierOff(lock);
     LOCK_WRITE_READ_LOCK(&lock->lock);    
-    omwqueue_reset_fully_read(&lock->writeQueue);
+    drmvqueue_reset_fully_read(&lock->writeQueue);
     __sync_synchronize();//Flush
     NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
 }
 
 void ardxlock_write_read_unlock(AgnosticRDXLock * lock) {
-    omwqueue_flush(&lock->writeQueue, lock->writer);
+    drmvqueue_flush(&lock->writeQueue);
     LOCK_WRITE_READ_UNLOCK(&lock->lock);
 }
 

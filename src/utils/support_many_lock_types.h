@@ -46,6 +46,7 @@
 //***********************************
 #include "lock/agnostic_rdx_lock.h"
 
+#define HAS_LOCK_DELEGATE_FUN 1
 #define LOCK_DATATYPE_NAME AgnosticRDXLock
 #define LOCK_FUN_PREFIX ardxlock
 
