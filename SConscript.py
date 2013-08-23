@@ -59,7 +59,13 @@ env = Environment(
     CXX = 'clang++',
     LINKFLAGS = ' '.join(std_link_flags),
     CPPPATH = ['.',
-               'src'])
+               'src/',
+               'src/lock',
+               'src/datastructures',
+               'src/tests',
+               'src/utils',
+               'src/benchmark/skiplist',
+               'src/benchmark/pairingheap'])
 
 num_of_cores_str=str(multiprocessing.cpu_count())
 
@@ -364,6 +370,25 @@ env.Program(
 env.Program(
     target = 'test_pairingheap',
     source = ['src/benchmark/pairingheap/test_pairingheap.c'])
+
+#########################
+#Data structure benchmark
+#########################
+
+env.Program(
+    target = 'pairing_heap_bench_qdlock',
+    source = ['src/datastructures_bench/priority_queue_bench.c'],
+    CPPDEFINES = ['USE_QDLOCK', 
+                  'USE_PAIRING_HEAP'])
+
+pairing_heap_bench_ccsynch_object = env.Object(
+    target = 'pairing_heap_bench_ccsynch.o',
+    source = ['src/datastructures_bench/priority_queue_bench.c'],
+    CPPDEFINES = ['USE_CCSYNCH', 
+                  'USE_PAIRING_HEAP'])
+env.Program(
+    target = 'pairing_heap_bench_ccsynch',
+    source = [pairing_heap_bench_ccsynch_object])
 
 #############
 #Copy scripts

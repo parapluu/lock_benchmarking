@@ -1,4 +1,6 @@
 
+#Locks and lock benchmarks
+
 AddOption('--cpp_locks',
           action='store_true',
           dest='cpp_locks',
