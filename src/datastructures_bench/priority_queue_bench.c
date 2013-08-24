@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -6,12 +5,10 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <limits.h>
+#include <sched.h>
 #include "smp_utils.h"
 #include "skiplist.h"
 #include "smp_utils.h"
-
-
-
 
 //=======================
 //>>>>>>>>>>>>>>>>>>>>>>>
@@ -46,6 +43,21 @@ void lock_init(){
 
 void lock_thread_init(){
     threadStateInit(&thread_state);
+}
+
+#elif defined (USE_HSYNCH)
+
+#include "datastructures_bench/synch_algorithms/hsynch.h"
+
+HSynchStruct lock __attribute__((aligned(64)));
+__thread HSynchThreadState thread_state __attribute__((aligned(64)));
+
+void lock_init(){
+    HSynchStructInit(&lock);
+}
+
+void lock_thread_init(){
+    HSynchThreadStateInit(&thread_state);
 }
 
 #endif
@@ -101,7 +113,7 @@ inline int dequeue(){
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 }
 
-#elif defined (USE_CCSYNCH)
+#elif defined (USE_CCSYNCH) || defined (USE_HSYNCH)
 
 int enqueue_cs(int enqueueValue){
    priority_queue.value = 
@@ -119,6 +131,8 @@ int dequeue_cs(int notUsed){
     }
 }
 
+#ifdef USE_CCSYNCH
+
 inline static void enqueue(int value){
     applyOp(&lock, &thread_state, &enqueue_cs, value, 0/*Not used*/);
 }
@@ -126,9 +140,20 @@ inline static int dequeue(){
     return applyOp(&lock, &thread_state, &dequeue_cs, 0/*Not used*/, 0/*Not used*/);
 }
 
-#endif
+#elif defined (USE_HSYNCH)
+
+inline static void enqueue(int value){
+    applyOp(&lock, &thread_state, &enqueue_cs, value, sched_getcpu());
+}
+inline static int dequeue(){
+    return applyOp(&lock, &thread_state, &dequeue_cs, 0/*Not used*/, sched_getcpu());
+}
 
 #endif
+
+#endif // CCSYNCH or HSYNCH
+
+#endif //USE Pairing heap
 //<<<<<<<<<<<<<<<<<<<<<<<
 // Datastructure depended code
 //<<<<<<<<<<<<<<<<<<<<<<<
