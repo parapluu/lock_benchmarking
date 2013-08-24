@@ -10,6 +10,8 @@
 #include "skiplist.h"
 #include "smp_utils.h"
 
+//#define DEBUG_PRINT_IN_CS
+
 //=======================
 //>>>>>>>>>>>>>>>>>>>>>>>
 // Lock depended code
@@ -60,6 +62,21 @@ void lock_thread_init(){
     HSynchThreadStateInit(&thread_state);
 }
 
+#elif defined (USE_FLATCOMB)
+
+void enqueue_cs(int enqueueValue);
+int dequeue_cs();
+#include "datastructures_bench/synch_algorithms/flat_comb.h"
+
+FlatComb lock __attribute__((aligned(64)));
+__thread SlotInfoPtr thread_state __attribute__((aligned(64)));
+
+void lock_init(){
+init_flat_comb(&lock);
+}
+
+void lock_thread_init(){}
+
 #endif
 //<<<<<<<<<<<<<<<<<<<<<<<
 // END Lock depended code
@@ -93,15 +110,24 @@ void datastructure_destroy(){
 #ifdef USE_QDLOCK
 
 void enqueue_cs(int enqueueValue, int * notUsed){
+#ifdef DEBUG_PRINT_IN_CS
+    printf("ENQ CS %d\n", enqueueValue);
+#endif
    priority_queue.value = 
       insert(priority_queue.value, enqueueValue);    
 }
 
 void dequeue_cs(int notUsed, int * resultLocation){
     if(priority_queue.value != NULL){
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", top(priority_queue.value));
+#endif
         *resultLocation = top(priority_queue.value);
         priority_queue.value = pop(priority_queue.value);
     }else{
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
         *resultLocation = -1;
     }
 }
@@ -116,6 +142,9 @@ inline int dequeue(){
 #elif defined (USE_CCSYNCH) || defined (USE_HSYNCH)
 
 int enqueue_cs(int enqueueValue){
+#ifdef DEBUG_PRINT_IN_CS
+        printf("ENQ CS %d\n", enqueueValue);
+#endif
    priority_queue.value = 
       insert(priority_queue.value, enqueueValue);    
    return 0;
@@ -124,9 +153,15 @@ int enqueue_cs(int enqueueValue){
 int dequeue_cs(int notUsed){
     if(priority_queue.value != NULL){
         int returnValue = top(priority_queue.value);
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", returnValue);
+#endif
         priority_queue.value = pop(priority_queue.value);
         return returnValue;
     }else{
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
         return -1;
     }
 }
@@ -151,7 +186,39 @@ inline static int dequeue(){
 
 #endif
 
-#endif // CCSYNCH or HSYNCH
+#elif defined (USE_FLATCOMB)
+
+void enqueue_cs(int enqueueValue){
+#ifdef DEBUG_PRINT_IN_CS
+        printf("ENQ CS %d\n", enqueueValue);
+#endif
+   priority_queue.value = 
+      insert(priority_queue.value, enqueueValue);    
+}
+
+int dequeue_cs(){
+    if(priority_queue.value != NULL){
+        int returnValue = top(priority_queue.value);
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", returnValue);
+#endif
+        priority_queue.value = pop(priority_queue.value);
+        return returnValue;
+    }else{
+        return -1;
+    }
+}
+
+inline void enqueue(int value){
+    do_op(&lock, &thread_state, value);
+    //    adxlock_delegate(&lock, &enqueue_cs, value); 
+}
+inline int dequeue(){
+    return do_op(&lock, &thread_state, _DEQ_VALUE);
+    //adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
+}
+
+#endif // lock spesific
 
 #endif //USE Pairing heap
 //<<<<<<<<<<<<<<<<<<<<<<<

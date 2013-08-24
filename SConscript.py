@@ -407,6 +407,17 @@ env.Program(
     target = 'pairing_heap_bench_hsynch',
     source = [pairing_heap_bench_hsynch_object])
 
+#-----------------------------------------------------------------
+
+pairing_heap_bench_flatcomb_object = env.Object(
+    target = 'pairing_heap_bench_flatcomb.o',
+    source = ['src/datastructures_bench/priority_queue_bench.c'],
+    CPPDEFINES = ['USE_FLATCOMB',
+                  'USE_PAIRING_HEAP'] + numa_structure_defines())
+env.Program(
+    target = 'pairing_heap_bench_flatcomb',
+    source = [pairing_heap_bench_flatcomb_object])
+
 #############
 #Copy scripts
 #############
