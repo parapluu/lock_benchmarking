@@ -72,10 +72,12 @@ FlatComb lock __attribute__((aligned(64)));
 __thread SlotInfoPtr thread_state __attribute__((aligned(64)));
 
 void lock_init(){
-init_flat_comb(&lock);
+    init_flat_comb(&lock);
 }
 
-void lock_thread_init(){}
+void lock_thread_init(){
+    thread_state.value = NULL;
+}
 
 #endif
 //<<<<<<<<<<<<<<<<<<<<<<<
