@@ -234,6 +234,8 @@ typedef struct FlatComb {
 
 void init_flat_comb(FlatComb * flatcomb){
     flatcomb->_tail_slot = NULL;
+    flatcomb->_timestamp = 0;
+    tataslock_initialize(&flatcomb->lock, NULL);
     __sync_synchronize();
 }
 
@@ -249,47 +251,48 @@ SlotInfo* get_new_slot(FlatComb * flatcomb, SlotInfo * _tls_slot_info) {
 
     SlotInfo* curr_tail;
     do {
-        curr_tail = flatcomb->_tail_slot;
-        //TODO make usre this is atomic
-        _tls_slot_info->_next = curr_tail;
+        load_acq(curr_tail, flatcomb->_tail_slot);
+        store_rel(_tls_slot_info->_next, curr_tail);
     } while(false == __sync_bool_compare_and_swap(&flatcomb->_tail_slot, curr_tail, _tls_slot_info));
 
     return _tls_slot_info;
 }
 
-void enq_slot(FlatComb * flatcomb, SlotInfo* p_slot) {
-    SlotInfo* curr_tail;
-    do {
-        //TODO make sure atomic
-        curr_tail = flatcomb->_tail_slot;
-        p_slot->_next = curr_tail;
-    } while(false == __sync_bool_compare_and_swap(&flatcomb->_tail_slot, curr_tail, p_slot));
-}
+/* void enq_slot(FlatComb * flatcomb, SlotInfo* p_slot) { */
+/*     SlotInfo* curr_tail; */
+/*     do { */
+/*         //TODO make sure atomic */
+/*         curr_tail = flatcomb->_tail_slot; */
+/*         p_slot->_next = curr_tail; */
+/*     } while(false == __sync_bool_compare_and_swap(&flatcomb->_tail_slot, curr_tail, p_slot)); */
+/* } */
 
-void enq_slot_if_needed(FlatComb * flatcomb, SlotInfo* p_slot) {
-    if(NULL == p_slot->_next) {
-        enq_slot(flatcomb, p_slot);
-    }
-}
+/* void enq_slot_if_needed(FlatComb * flatcomb, SlotInfo* p_slot) { */
+/*     if(NULL == p_slot->_next) { */
+/*         enq_slot(flatcomb, p_slot); */
+/*     } */
+/* } */
 
 inline void flat_combining(FlatComb * flatcomb) {
     for (int iTry=0;iTry<_NUM_REP; ++iTry) {
         //Memory::read_barrier();
         int num_changes=0;
-        SlotInfo* curr_slot = flatcomb->_tail_slot;
-        while(NULL != curr_slot->_next) {
-            int curr_value = curr_slot->_req_ans;
+        SlotInfo* curr_slot;
+        load_acq(curr_slot, flatcomb->_tail_slot);
+        while(NULL != ACCESS_ONCE(curr_slot->_next)) {
+            int curr_value;
+            load_acq(curr_value, curr_slot->_req_ans);
             if(curr_value == _DEQ_VALUE) {
                 ++num_changes;
-                curr_slot->_req_ans = -dequeue_cs();
-                curr_slot->_time_stamp = 0;
+                store_rel(curr_slot->_req_ans, -dequeue_cs());
+                store_rel(curr_slot->_time_stamp, 0);
             } else if(curr_value > 0){
                 ++num_changes;
                 enqueue_cs(curr_value);
-                curr_slot->_req_ans = _NULL_VALUE;
-                curr_slot->_time_stamp = 0;
+                store_rel(curr_slot->_req_ans, _NULL_VALUE);
+                store_rel(curr_slot->_time_stamp, 0);
             }
-            curr_slot = curr_slot->_next;
+            load_acq(curr_slot, curr_slot->_next);
         }//while on slots
         if(num_changes < _REP_THRESHOLD)
             break;
@@ -305,8 +308,8 @@ int do_op(FlatComb * flatcomb, SlotInfoPtr * _tls_slot_info, int op_code) {
     }
 
     //    volatile SlotInfo** my_next = &my_slot->_next;
-    int*  my_re_ans = &my_slot->_req_ans;
-    *my_re_ans = op_code;
+    int* my_re_ans = &my_slot->_req_ans;
+    store_rel(*my_re_ans, op_code);
 
     do {
         //TODO what is this? Never dequed?
@@ -324,12 +327,14 @@ int do_op(FlatComb * flatcomb, SlotInfoPtr * _tls_slot_info, int op_code) {
             return -(*my_re_ans);
         } else {
             //            Memory::write_barrier();
-            while(op_code == *my_re_ans && 
-                  tataslock_is_locked(&flatcomb->lock)) {
-                //                thread_wait(iThread);
-            }
-            //            Memory::read_barrier();
-            if(op_code != *my_re_ans) {
+            bool currentValue;
+            do {
+                load_acq(currentValue, *my_re_ans);
+                //            Memory::read_barrier();
+            }while(op_code == currentValue && 
+                   tataslock_is_locked(&flatcomb->lock));
+
+            if(op_code != currentValue) {
                 return -(*my_re_ans);
             }
         }
