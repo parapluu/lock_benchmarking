@@ -9,9 +9,19 @@
 #include "smp_utils.h"
 #include "skiplist.h"
 #include "smp_utils.h"
+#include <sched.h>
 
 //#define DEBUG_PRINT_IN_CS
 //#define DEBUG_PRINT_OUTSIDE_CS
+#define SANITY_CHECK
+
+#ifdef SANITY_CHECK
+CacheLinePaddedInt dequeues_executed = {.value = 0};
+CacheLinePaddedInt enqueues_executed = {.value = 0};
+CacheLinePaddedInt dequeues_issued = {.value = 0};
+CacheLinePaddedInt enqueues_issued = {.value = 0};
+#endif
+
 
 //=======================
 //>>>>>>>>>>>>>>>>>>>>>>>
@@ -121,6 +131,9 @@ void enqueue_cs(int enqueueValue, int * notUsed){
 }
 
 void dequeue_cs(int notUsed, int * resultLocation){
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
     if(priority_queue.value != NULL){
 #ifdef DEBUG_PRINT_IN_CS
         printf("DEQ CS %d\n", top(priority_queue.value));
@@ -154,6 +167,9 @@ int enqueue_cs(int enqueueValue){
 }
 
 int dequeue_cs(int notUsed){
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
     if(priority_queue.value != NULL){
         int returnValue = top(priority_queue.value);
 #ifdef DEBUG_PRINT_IN_CS
@@ -200,6 +216,9 @@ void enqueue_cs(int enqueueValue){
 }
 
 int dequeue_cs(){
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
     if(priority_queue.value != NULL){
         int returnValue = top(priority_queue.value);
 #ifdef DEBUG_PRINT_IN_CS
@@ -325,6 +344,9 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
             enqueue(randomNumber);
         }else{
             int dequeueValue = dequeue();
+#ifdef SANITY_CHECK
+            __sync_fetch_and_add(&dequeues_issued.value, 1);
+#endif
 #ifdef DEBUG_PRINT_OUTSIDE_CS
             printf("DEQ OUT %d\n", dequeueValue);
 #endif
@@ -402,6 +424,12 @@ double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
     gettimeofday(&timeEnd, NULL);
 
     datastructure_destroy();
+
+#ifdef SANITY_CHECK
+    if(dequeues_executed.value != dequeues_issued.value){
+        printf("\033[31m SANITY_CHECK FAIL:\033[m\n dequeues_issued == %d\n dequeues_executed == %d\n", dequeues_issued.value, dequeues_executed.value);
+    }
+#endif
 
     long benchmarRealTime = (timeEnd.tv_sec-timeStart.tv_sec)*1000000 + timeEnd.tv_usec-timeStart.tv_usec;
 
