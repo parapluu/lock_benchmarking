@@ -11,6 +11,7 @@
 #include "smp_utils.h"
 
 //#define DEBUG_PRINT_IN_CS
+//#define DEBUG_PRINT_OUTSIDE_CS
 
 //=======================
 //>>>>>>>>>>>>>>>>>>>>>>>
@@ -195,19 +196,22 @@ void enqueue_cs(int enqueueValue){
         printf("ENQ CS %d\n", enqueueValue);
 #endif
    priority_queue.value = 
-      insert(priority_queue.value, enqueueValue);    
+      insert(priority_queue.value, enqueueValue + 2);    
 }
 
 int dequeue_cs(){
     if(priority_queue.value != NULL){
         int returnValue = top(priority_queue.value);
 #ifdef DEBUG_PRINT_IN_CS
-        printf("DEQ CS %d\n", returnValue);
+        printf("DEQ CS %d\n", returnValue - 2);
 #endif
         priority_queue.value = pop(priority_queue.value);
         return returnValue;
     }else{
-        return -1;
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
+        return 1;
     }
 }
 
@@ -315,9 +319,16 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
     while(!ACCESS_ONCE(*benchmarkStoped)){
         if(erand48(xsubi) > imsw.percentageDequeue){
             int randomNumber = 1 + ((int)jrand48(xsubi) & ADD_RAND_NUM_MASK);
+#ifdef DEBUG_PRINT_OUTSIDE_CS
+            printf("ENQ OUT %d\n", randomNumber);
+#endif
             enqueue(randomNumber);
         }else{
-            dummy = dummy + dequeue();        
+            int dequeueValue = dequeue();
+#ifdef DEBUG_PRINT_OUTSIDE_CS
+            printf("DEQ OUT %d\n", dequeueValue);
+#endif
+            dummy = dummy + dequeueValue;        
         }
         for(int u = 0; u < imsw.iterationsSpentNonCriticalWork; u++){
             int writeToPos1 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);

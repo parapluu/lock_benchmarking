@@ -44,7 +44,6 @@ void waitUntilWriteBarrierOff(AgnosticRDXLock *lock) {
 
 void ardxlock_write_with_response(AgnosticRDXLock *lock, void (*delgateFun)(void *, void **), void * data, void ** responseLocation) {
     waitUntilWriteBarrierOff(lock);
-    int counter = 0;
     DelegateRequestEntry e;
     e.request = delgateFun;
     e.data = data;

@@ -198,8 +198,8 @@ bool tataslock_try_write_read_lock(TATASLock *lock) {
 
 #define _NUM_REP 64
 #define _REP_THRESHOLD 109
-#define  _NULL_VALUE (INT_MIN+3)
-#define  _DEQ_VALUE (INT_MIN+2)
+#define  _NULL_VALUE (0)
+#define  _DEQ_VALUE (INT_MIN)
 
 //list inner types ------------------------------
 typedef struct SlotInfo {
@@ -248,7 +248,6 @@ SlotInfo* get_new_slot(FlatComb * flatcomb, SlotInfo * _tls_slot_info) {
     _tls_slot_info->_next        = NULL;
     _tls_slot_info->_custem_info = NULL;
     _tls_slot_info->_deq_pending = false;
-
     SlotInfo* curr_tail;
     do {
         load_acq(curr_tail, flatcomb->_tail_slot);
@@ -279,19 +278,21 @@ inline void flat_combining(FlatComb * flatcomb) {
         int num_changes=0;
         SlotInfo* curr_slot;
         load_acq(curr_slot, flatcomb->_tail_slot);
-        while(NULL != ACCESS_ONCE(curr_slot->_next)) {
+        while(NULL != curr_slot) {
             int curr_value;
             load_acq(curr_value, curr_slot->_req_ans);
             if(curr_value == _DEQ_VALUE) {
                 ++num_changes;
-                store_rel(curr_slot->_req_ans, -dequeue_cs());
+                int writeOut = -dequeue_cs();
+                store_rel(curr_slot->_req_ans, writeOut);
                 store_rel(curr_slot->_time_stamp, 0);
-            } else if(curr_value > 0){
+            } else if(curr_value > _NULL_VALUE){
                 ++num_changes;
                 enqueue_cs(curr_value);
                 store_rel(curr_slot->_req_ans, _NULL_VALUE);
                 store_rel(curr_slot->_time_stamp, 0);
             }
+
             load_acq(curr_slot, curr_slot->_next);
         }//while on slots
         if(num_changes < _REP_THRESHOLD)
@@ -307,10 +308,7 @@ int do_op(FlatComb * flatcomb, SlotInfoPtr * _tls_slot_info, int op_code) {
         my_slot = _tls_slot_info->value = get_new_slot(flatcomb, my_slot);
     }
 
-    //    volatile SlotInfo** my_next = &my_slot->_next;
-    int* my_re_ans = &my_slot->_req_ans;
-    store_rel(*my_re_ans, op_code);
-
+    store_rel(my_slot->_req_ans, op_code);
     do {
         //TODO what is this? Never dequed?
         //if(NULL == my_next)
@@ -321,22 +319,24 @@ int do_op(FlatComb * flatcomb, SlotInfoPtr * _tls_slot_info, int op_code) {
         if(tataslock_try_write_read_lock(&flatcomb->lock)) {
             //            machine_start_fc(iThread);
             flat_combining(flatcomb);
+            int returnValue = my_slot->_req_ans;
+
             tataslock_write_read_unlock(&flatcomb->lock);
             //_fc_lock.set(0);
             //            machine_end_fc(iThread);
-            return -(*my_re_ans);
+
+            return (-returnValue) - 2;
         } else {
             //            Memory::write_barrier();
-            bool currentValue;
+            //__sync_synchronize();
+            int currentValue = op_code;
             do {
-                load_acq(currentValue, *my_re_ans);
+                load_acq(currentValue, my_slot->_req_ans);
                 //            Memory::read_barrier();
-            }while(op_code == currentValue && 
-                   tataslock_is_locked(&flatcomb->lock));
-
-            if(op_code != currentValue) {
-                return -(*my_re_ans);
-            }
+                if(op_code != currentValue) {
+                    return (-currentValue) - 2;
+                }
+            }while(tataslock_is_locked(&flatcomb->lock));
         }
     } while(true);
 }
