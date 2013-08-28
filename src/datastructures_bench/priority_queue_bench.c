@@ -12,9 +12,9 @@
 #include <sched.h>
 
 #define PINNING
-#define RANDOM_LOCAL_WORK
+//#define RANDOM_LOCAL_WORK
 
-#define MIN_LOCAL_WORK_WHEN_RANDOM 32
+//#define MIN_LOCAL_WORK_WHEN_RANDOM 32
 //#define DEBUG_PRINT_IN_CS
 //#define DEBUG_PRINT_OUTSIDE_CS
 //#define SANITY_CHECK
@@ -442,7 +442,7 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
             dummy = dummy + dequeueValue;        
         }
 #ifdef RANDOM_LOCAL_WORK
-        int workIterations = 0;
+        int workIterations = MIN_LOCAL_WORK_WHEN_RANDOM;
         if(imsw.iterationsSpentNonCriticalWork != 0){
             workIterations = MIN_LOCAL_WORK_WHEN_RANDOM + ((int)jrand48(xsubi)) % imsw.iterationsSpentNonCriticalWork;
         }       
