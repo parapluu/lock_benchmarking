@@ -9,6 +9,8 @@
 #include "synch_algs_primitives.h"
 #include "clh.h"
 
+#define DEQUEUE_ARG INT_MIN
+
 #define HSYNCH_NCLUSTERS                NUMBER_OF_NUMA_NODES
 const int HSYNCH_HELP_BOUND =           3 * N_THREADS;
 
@@ -51,7 +53,7 @@ typedef struct HSynchStruct {
 } HSynchStruct;
 
 
-inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, int (*sfunc)(int), ArgVal arg, int pid) {
+inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgVal arg, int pid) {
     volatile HSynchLockNode *p;
     volatile HSynchLockNode *cur;
     register HSynchLockNode *next_node, *tmp_next;
@@ -104,7 +106,11 @@ inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, int 
         l->counter++;
 #endif
         tmp_next = p->next;
-        p->arg_ret = sfunc(p->arg_ret);
+        if(p->arg_ret==DEQUEUE_ARG){
+            p->arg_ret = dequeue_cs();
+        }else{
+            enqueue_cs(p->arg_ret);
+        }
         p->completed = true;
         p->locked = false;
         p = tmp_next;

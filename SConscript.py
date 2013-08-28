@@ -380,7 +380,7 @@ pairing_heap_bench_qdlock_object = env.Object(
     target = 'pairing_heap_bench_qdlock.o',
     source = ['src/datastructures_bench/priority_queue_bench.c'],
     CPPDEFINES = ['USE_QDLOCK', 
-                  'USE_PAIRING_HEAP'])
+                  'USE_PAIRING_HEAP'] + numa_structure_defines())
 env.Program(
     target = 'pairing_heap_bench_qdlock',
     source = [pairing_heap_bench_qdlock_object])
@@ -391,7 +391,7 @@ pairing_heap_bench_ccsynch_object = env.Object(
     target = 'pairing_heap_bench_ccsynch.o',
     source = ['src/datastructures_bench/priority_queue_bench.c'],
     CPPDEFINES = ['USE_CCSYNCH', 
-                  'USE_PAIRING_HEAP'])
+                  'USE_PAIRING_HEAP'] + numa_structure_defines())
 env.Program(
     target = 'pairing_heap_bench_ccsynch',
     source = [pairing_heap_bench_ccsynch_object])

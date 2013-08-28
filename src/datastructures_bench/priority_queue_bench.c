@@ -11,9 +11,11 @@
 #include "smp_utils.h"
 #include <sched.h>
 
+#define PINNING
+
 //#define DEBUG_PRINT_IN_CS
 //#define DEBUG_PRINT_OUTSIDE_CS
-#define SANITY_CHECK
+//#define SANITY_CHECK
 
 #ifdef SANITY_CHECK
 CacheLinePaddedInt dequeues_executed = {.value = 0};
@@ -45,6 +47,8 @@ void lock_thread_init(){}
 
 #elif defined (USE_CCSYNCH)
 
+void enqueue_cs(int enqueueValue);
+int dequeue_cs();
 #include "datastructures_bench/synch_algorithms/ccsynch.h"
 
 LockStruct lock __attribute__((aligned(64)));
@@ -60,6 +64,8 @@ void lock_thread_init(){
 
 #elif defined (USE_HSYNCH)
 
+void enqueue_cs(int enqueueValue);
+int dequeue_cs();
 #include "datastructures_bench/synch_algorithms/hsynch.h"
 
 HSynchStruct lock __attribute__((aligned(64)));
@@ -123,6 +129,9 @@ void datastructure_destroy(){
 #ifdef USE_QDLOCK
 
 void enqueue_cs(int enqueueValue, int * notUsed){
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
 #ifdef DEBUG_PRINT_IN_CS
     printf("ENQ CS %d\n", enqueueValue);
 #endif
@@ -157,23 +166,25 @@ inline int dequeue(){
 
 #elif defined (USE_CCSYNCH) || defined (USE_HSYNCH)
 
-int enqueue_cs(int enqueueValue){
+void enqueue_cs(int enqueueValue){
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
 #ifdef DEBUG_PRINT_IN_CS
-        printf("ENQ CS %d\n", enqueueValue);
+    printf("ENQ CS %d\n", enqueueValue);
 #endif
    priority_queue.value = 
-      insert(priority_queue.value, enqueueValue);    
-   return 0;
+      insert(priority_queue.value, enqueueValue + 2);    
 }
 
-int dequeue_cs(int notUsed){
+int dequeue_cs(){
 #ifdef SANITY_CHECK
     dequeues_executed.value++;
 #endif
     if(priority_queue.value != NULL){
         int returnValue = top(priority_queue.value);
 #ifdef DEBUG_PRINT_IN_CS
-        printf("DEQ CS %d\n", returnValue);
+        printf("DEQ CS %d\n", returnValue - 2);
 #endif
         priority_queue.value = pop(priority_queue.value);
         return returnValue;
@@ -181,26 +192,27 @@ int dequeue_cs(int notUsed){
 #ifdef DEBUG_PRINT_IN_CS
         printf("DEQ CS %d\n", -1);
 #endif
-        return -1;
+        return 1;
     }
 }
+
 
 #ifdef USE_CCSYNCH
 
 inline static void enqueue(int value){
-    applyOp(&lock, &thread_state, &enqueue_cs, value, 0/*Not used*/);
+    applyOp(&lock, &thread_state, value, 0/*Not used*/);
 }
 inline static int dequeue(){
-    return applyOp(&lock, &thread_state, &dequeue_cs, 0/*Not used*/, 0/*Not used*/);
+    return applyOp(&lock, &thread_state, DEQUEUE_ARG, 0/*Not used*/);
 }
 
 #elif defined (USE_HSYNCH)
 
 inline static void enqueue(int value){
-    applyOp(&lock, &thread_state, &enqueue_cs, value, sched_getcpu());
+    applyOp(&lock, &thread_state, value, sched_getcpu());
 }
 inline static int dequeue(){
-    return applyOp(&lock, &thread_state, &dequeue_cs, 0/*Not used*/, sched_getcpu());
+    return applyOp(&lock, &thread_state, DEQUEUE_ARG, sched_getcpu());
 }
 
 #endif
@@ -208,6 +220,9 @@ inline static int dequeue(){
 #elif defined (USE_FLATCOMB)
 
 void enqueue_cs(int enqueueValue){
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
 #ifdef DEBUG_PRINT_IN_CS
         printf("ENQ CS %d\n", enqueueValue);
 #endif
@@ -278,7 +293,10 @@ typedef struct BoolWrapperImpl{
 
 
 typedef struct LockThreadLocalSeedImpl{
+    char pad1[FALSE_SHARING_SECURITY];
+    int thread_id;
     unsigned short * seed;
+    char pad2[FALSE_SHARING_SECURITY];
 } LockThreadLocalSeed;
 
 
@@ -316,6 +334,50 @@ ImutableStateWrapper imsw  __attribute__((aligned(64))) =
 
 __thread unsigned short * myXsubi;
 
+#ifdef PINNING
+
+int numa_structure[NUMBER_OF_NUMA_NODES][NUMBER_OF_CPUS_PER_NODE] = NUMA_STRUCTURE;
+int core_in_node_counters[NUMBER_OF_NUMA_NODES];
+int next_numa_node = 0;
+bool first = true;
+pthread_mutex_t thread_pin_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void pin(int thread_id){
+    pthread_mutex_lock(&thread_pin_mutex);
+    if(first){
+        first = false;
+        for(int i = 0; i < NUMBER_OF_NUMA_NODES; i++){
+            core_in_node_counters[i] = 0;
+        }
+    }
+    int node = next_numa_node % NUMBER_OF_NUMA_NODES;
+    int core_in_node = core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE;
+    int core_to_pin_to = numa_structure[node][core_in_node]; 
+    
+    core_in_node_counters[next_numa_node]++;
+
+#ifdef SPREAD_PINNING_POLICY
+    next_numa_node++;
+#else
+    if(0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE)){
+        next_numa_node++;
+    }
+#endif
+
+    int ret = 0;
+    cpu_set_t mask;  
+    unsigned int len = sizeof(mask);
+    CPU_ZERO(&mask);
+    CPU_SET(core_to_pin_to, &mask);
+    ret = sched_setaffinity(0, len, &mask);
+    if (ret == -1){
+        printf("sched_setaffinity failed!!\n");
+        exit(0);
+    }
+    pthread_mutex_unlock(&thread_pin_mutex);
+}
+#endif
+
 //=============
 //The Benchmark
 //=============
@@ -328,6 +390,9 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
     LockThreadLocalSeed * lockThreadLocalSeed = (LockThreadLocalSeed *)lockThreadLocalSeedPointer; 
     int privateArray[NUMBER_OF_ELEMENTS_IN_ARRAYS];
     unsigned short * xsubi = lockThreadLocalSeed->seed;
+#ifdef PINNING
+    pin(lockThreadLocalSeed->thread_id);
+#endif
     myXsubi = xsubi;
     int dummy = 0;//To avoid that the compiler optimize away read
     int totalNumberOfCriticalSections = 0;
@@ -342,6 +407,9 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
             printf("ENQ OUT %d\n", randomNumber);
 #endif
             enqueue(randomNumber);
+#ifdef SANITY_CHECK
+            __sync_fetch_and_add(&enqueues_issued.value, 1);
+#endif
         }else{
             int dequeueValue = dequeue();
 #ifdef SANITY_CHECK
@@ -393,7 +461,7 @@ double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
     struct timeval timeStart;
     struct timeval timeEnd;
     LockThreadLocalSeed lockThreadLocalSeeds[numberOfThreads];
-    for(int i = 0; i < numberOfThreads; i ++){
+    for(int i = 0; i < numberOfThreads; i++){
         unsigned short * seed = threadLocalSeeds[i].value;
         srand48(i);
         unsigned short * seedResult = seed48(seed);
@@ -402,6 +470,7 @@ double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
         seed[2] = seedResult[2];
         LockThreadLocalSeed * lockThreadLocalSeed = &lockThreadLocalSeeds[i];
         lockThreadLocalSeed->seed = seed;
+        lockThreadLocalSeed->thread_id = i;
         pthread_create(&threads[i],NULL,&mixed_read_write_benchmark_thread,lockThreadLocalSeed);
     }
     usleep(100000);//To make sure all threads are set up
@@ -426,8 +495,13 @@ double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
     datastructure_destroy();
 
 #ifdef SANITY_CHECK
-    if(dequeues_executed.value != dequeues_issued.value){
-        printf("\033[31m SANITY_CHECK FAIL:\033[m\n dequeues_issued == %d\n dequeues_executed == %d\n", dequeues_issued.value, dequeues_executed.value);
+    if((dequeues_executed.value != dequeues_issued.value) ||
+                (enqueues_executed.value != enqueues_issued.value)){
+        printf("\033[31m SANITY_CHECK FAIL:\033[m\n");
+        printf(" dequeues_issued == %d\n", dequeues_issued.value);
+        printf(" dequeues_executed.value == %d\n", dequeues_executed.value);
+        printf(" enqueues_issued == %d\n", enqueues_issued.value);
+        printf(" enqueues_executed.value == %d\n", enqueues_executed.value);
     }
 #endif
 

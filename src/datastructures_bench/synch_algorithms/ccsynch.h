@@ -9,6 +9,8 @@
 #include "synch_algs_primitives.h"
 //#include "rand.h"
 
+#define DEQUEUE_ARG INT_MIN
+
 const int CCSIM_HELP_BOUND = 3 * N_THREADS;
 
 typedef struct HalfLockNode {
@@ -37,7 +39,7 @@ typedef struct ThreadState {
     LockNode *next_node;
     int toggle;
 #if defined(__sun) || defined(sun)
-    schedctl_t *schedule_control;    
+    schedctl_t *schedule_control;
 #endif
     char pad2[128];
 } ThreadState;
@@ -61,7 +63,7 @@ inline static void threadStateInit(ThreadState *st_thread) {
 #endif
 }
 
-inline static RetVal applyOp(LockStruct *l, ThreadState *st_thread, int (*sfunc)(int), ArgVal arg, int pid) {
+inline static RetVal applyOp(LockStruct *l, ThreadState *st_thread, ArgVal arg, int pid) {
     volatile LockNode *p;
     volatile LockNode *cur;
     register LockNode *next_node, *tmp_next;
@@ -112,7 +114,11 @@ inline static RetVal applyOp(LockStruct *l, ThreadState *st_thread, int (*sfunc)
         l->counter++;
 #endif
         tmp_next = p->next;
-        p->arg_ret = sfunc(p->arg_ret);
+        if(p->arg_ret==DEQUEUE_ARG){
+            p->arg_ret = dequeue_cs();
+        }else{
+            enqueue_cs(p->arg_ret);
+        }
         p->completed = true;
         p->locked = false;
         p = tmp_next;
