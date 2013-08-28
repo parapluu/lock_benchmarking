@@ -441,7 +441,10 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
             dummy = dummy + dequeueValue;        
         }
 #ifdef RANDOM_LOCAL_WORK
-        int workIterations = ((int)jrand48(xsubi)) % imsw.iterationsSpentNonCriticalWork;
+        int workIterations = 0;
+        if(imsw.iterationsSpentNonCriticalWork != 0){
+            workIterations = ((int)jrand48(xsubi)) % imsw.iterationsSpentNonCriticalWork;
+        }       
         for(int u = 0; u < workIterations; u++){
 #else
         for(int u = 0; u < imsw.iterationsSpentNonCriticalWork; u++){
