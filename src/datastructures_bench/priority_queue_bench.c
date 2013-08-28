@@ -12,6 +12,7 @@
 #include <sched.h>
 
 #define PINNING
+#define RANDOM_LOCAL_WORK
 
 //#define DEBUG_PRINT_IN_CS
 //#define DEBUG_PRINT_OUTSIDE_CS
@@ -439,7 +440,12 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
 #endif
             dummy = dummy + dequeueValue;        
         }
+#ifdef RANDOM_LOCAL_WORK
+        int workIterations = ((int)jrand48(xsubi)) % imsw.iterationsSpentNonCriticalWork;
+        for(int u = 0; u < workIterations; u++){
+#else
         for(int u = 0; u < imsw.iterationsSpentNonCriticalWork; u++){
+#endif
             int writeToPos1 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);
             int randomNumber = (int)jrand48(xsubi) & ADD_RAND_NUM_MASK;
             privateArray[writeToPos1] = privateArray[writeToPos1] + randomNumber;
