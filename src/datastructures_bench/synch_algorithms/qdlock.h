@@ -337,8 +337,11 @@ void drmvqueue_flush(DRMWQueue * queue){
             //Seems like there are no elements that should be read and the queue is
             //not closed. Check again if there are still no more elements that should
             //be read before closing the queue
-            __sync_synchronize();
-            __sync_synchronize();
+#ifdef WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT
+            for(int i = 0; i < WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT; i++){
+                __sync_synchronize();                
+            }
+#endif
             load_acq(newNumOfElementsToRead, queue->elementCount.value);
             if(newNumOfElementsToRead == numOfElementsToRead){
                 //numOfElementsToRead has not changed. Close the queue.
@@ -410,8 +413,6 @@ void adxlock_free(AgnosticDXLock * lock){
 
 void adxlock_register_this_thread(){
 }
-
-#define ACTIVATE_NO_CONTENTION_OPT
 
 inline
 void adxlock_write_with_response(AgnosticDXLock *lock, 

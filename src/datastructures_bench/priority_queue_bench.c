@@ -39,6 +39,10 @@ __thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
 
 #ifdef USE_QDLOCK
 
+//#define WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT 1
+#define ACTIVATE_NO_CONTENTION_OPT
+//#define CAS_FETCH_AND_ADD
+
 #include "datastructures_bench/synch_algorithms/qdlock.h"
 
 AgnosticDXLock lock __attribute__((aligned(64)));
