@@ -25,6 +25,10 @@ CacheLinePaddedInt enqueues_issued = {.value = 0};
 #endif
 
 
+#ifdef PINNING
+__thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
+#endif
+
 //=======================
 //>>>>>>>>>>>>>>>>>>>>>>>
 // Lock depended code
@@ -209,10 +213,20 @@ inline static int dequeue(){
 #elif defined (USE_HSYNCH)
 
 inline static void enqueue(int value){
-    applyOp(&lock, &thread_state, value, sched_getcpu());
+#ifdef PINNING
+    int my_numa_node = numa_node.value;
+#else
+    int my_numa_node = sched_getcpu() % NUMBER_OF_NUMA_NODES;
+#endif
+    applyOp(&lock, &thread_state, value, my_numa_node);
 }
 inline static int dequeue(){
-    return applyOp(&lock, &thread_state, DEQUEUE_ARG, sched_getcpu());
+#ifdef PINNING
+    int my_numa_node = numa_node.value;
+#else
+    int my_numa_node = sched_getcpu() % NUMBER_OF_NUMA_NODES;
+#endif
+    return applyOp(&lock, &thread_state, DEQUEUE_ARG, my_numa_node);
 }
 
 #endif
@@ -351,9 +365,10 @@ void pin(int thread_id){
         }
     }
     int node = next_numa_node % NUMBER_OF_NUMA_NODES;
+    numa_node.value = node;    
     int core_in_node = core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE;
     int core_to_pin_to = numa_structure[node][core_in_node]; 
-    
+
     core_in_node_counters[next_numa_node]++;
 
 #ifdef SPREAD_PINNING_POLICY

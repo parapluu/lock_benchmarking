@@ -53,7 +53,7 @@ typedef struct HSynchStruct {
 } HSynchStruct;
 
 
-inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgVal arg, int pid) {
+inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgVal arg, int my_numa_node) {
     volatile HSynchLockNode *p;
     volatile HSynchLockNode *cur;
     register HSynchLockNode *next_node, *tmp_next;
@@ -67,7 +67,7 @@ inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgV
 #if defined(__sun) || defined(sun)
     schedctl_start(st_thread->schedule_control);
 #endif
-    cur = (volatile HSynchLockNode *)SWAP(&l->Tail[pid % HSYNCH_NCLUSTERS].ptr, next_node);
+    cur = (volatile HSynchLockNode *)SWAP(&l->Tail[my_numa_node].ptr, next_node);
     cur->arg_ret = arg;
     cur->next = (HSynchLockNode *)next_node;
 #if defined(__sun) || defined(sun)
@@ -95,7 +95,7 @@ inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgV
     p = cur;                                // I am not been helped
     if (cur->completed)                     // I have been helped
         return cur->arg_ret;
-    clhLock(l->central_lock, pid);
+    clhLock(l->central_lock, 0 /*NOT USED*/);
 #ifdef DEBUG
     l->rounds++;
 #endif
@@ -116,7 +116,7 @@ inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgV
         p = tmp_next;
     }
     p->locked = false;                      // Unlock the next one
-    clhUnlock(l->central_lock, pid);
+    clhUnlock(l->central_lock, 0 /*NOT USED*/);
 #if defined(__sun) || defined(sun)
     schedctl_stop(st_thread->schedule_control);
 #endif
