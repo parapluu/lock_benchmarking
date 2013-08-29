@@ -29,8 +29,9 @@ CacheLinePaddedInt enqueues_issued = {.value = 0};
 
 #ifdef PINNING
 __thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
-//#define CORE_FIRST_POLICY_SANDY
+#define CORE_FIRST_POLICY_SANDY
 //#define SPREAD_PINNING_POLICY
+//#define NODE_FIRST_POLICY
 #endif
 
 
@@ -374,14 +375,22 @@ void pin(int thread_id){
             core_in_node_counters[i] = 0;
         }
     }
+
+
+#ifdef NODE_FIRST_POLICY
+    if((core_in_node_counters[next_numa_node] != 0) && (0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE))){
+        next_numa_node++;
+    }
+#endif
+#ifdef CORE_FIRST_POLICY_SANDY
+    if((core_in_node_counters[next_numa_node] != 0) && (0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE))){
+        next_numa_node++;
+    }
+#endif
+
     int node = next_numa_node % NUMBER_OF_NUMA_NODES;
     numa_node.value = node;    
     int core_in_node = core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE;
-
-
-#ifdef SPREAD_PINNING_POLICY
-    next_numa_node++;
-#else
 #ifdef CORE_FIRST_POLICY_SANDY
     if(((core_in_node+1) % 2) == 0){
         core_in_node = NUMBER_OF_CPUS_PER_NODE/2 + ((core_in_node+1)/2) - 1;
@@ -389,13 +398,12 @@ void pin(int thread_id){
         core_in_node = core_in_node / 2;
     }
 #endif
-    if(0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE)){
-        next_numa_node++;
-    }
-#endif
 
     int core_to_pin_to = numa_structure[node][core_in_node]; 
 
+#ifdef SPREAD_PINNING_POLICY
+    next_numa_node++;
+#endif
     core_in_node_counters[next_numa_node]++;
 
     int ret = 0;
