@@ -29,9 +29,11 @@ CacheLinePaddedInt enqueues_issued = {.value = 0};
 
 #ifdef PINNING
 __thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
+//#define CORE_FIRST_POLICY_SANDY
+//#define SPREAD_PINNING_POLICY
 #endif
 
-#define CORE_FIRST_POLICY_SANDY
+
 
 //=======================
 //>>>>>>>>>>>>>>>>>>>>>>>
