@@ -31,6 +31,8 @@ CacheLinePaddedInt enqueues_issued = {.value = 0};
 __thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
 #endif
 
+#define CORE_FIRST_POLICY_SANDY
+
 //=======================
 //>>>>>>>>>>>>>>>>>>>>>>>
 // Lock depended code
@@ -373,17 +375,27 @@ void pin(int thread_id){
     int node = next_numa_node % NUMBER_OF_NUMA_NODES;
     numa_node.value = node;    
     int core_in_node = core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE;
-    int core_to_pin_to = numa_structure[node][core_in_node]; 
 
-    core_in_node_counters[next_numa_node]++;
 
 #ifdef SPREAD_PINNING_POLICY
     next_numa_node++;
 #else
+#ifdef CORE_FIRST_POLICY_SANDY
+    if(((core_in_node+1) % 2) == 0){
+        core_in_node = NUMBER_OF_CPUS_PER_NODE/2 + ((core_in_node+1)/2) - 1;
+    }else if(core_in_node != 0){
+        core_in_node = core_in_node / 2;
+    }
+    printf("core in node %d\n", core_in_node);
+#endif
     if(0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE)){
         next_numa_node++;
     }
 #endif
+
+    int core_to_pin_to = numa_structure[node][core_in_node]; 
+
+    core_in_node_counters[next_numa_node]++;
 
     int ret = 0;
     cpu_set_t mask;  

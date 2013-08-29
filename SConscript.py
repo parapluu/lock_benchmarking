@@ -378,7 +378,7 @@ env.Program(
 
 pairing_heap_bench_qdlock_object = env.Object(
     target = 'pairing_heap_bench_qdlock.o',
-    source = ['src/datastructures_bench/priority_queue_bench.c'],
+    source = ['src/datastructures_bench/datastructures_bench.c'],
     CPPDEFINES = ['USE_QDLOCK', 
                   'USE_PAIRING_HEAP'] + numa_structure_defines())
 env.Program(
@@ -389,7 +389,7 @@ env.Program(
 
 pairing_heap_bench_ccsynch_object = env.Object(
     target = 'pairing_heap_bench_ccsynch.o',
-    source = ['src/datastructures_bench/priority_queue_bench.c'],
+    source = ['src/datastructures_bench/datastructures_bench.c'],
     CPPDEFINES = ['USE_CCSYNCH', 
                   'USE_PAIRING_HEAP'] + numa_structure_defines())
 env.Program(
@@ -400,7 +400,7 @@ env.Program(
 
 pairing_heap_bench_hsynch_object = env.Object(
     target = 'pairing_heap_bench_hsynch.o',
-    source = ['src/datastructures_bench/priority_queue_bench.c'],
+    source = ['src/datastructures_bench/datastructures_bench.c'],
     CPPDEFINES = ['USE_HSYNCH', 
                   'USE_PAIRING_HEAP'] + numa_structure_defines())
 env.Program(
@@ -411,7 +411,7 @@ env.Program(
 
 pairing_heap_bench_flatcomb_object = env.Object(
     target = 'pairing_heap_bench_flatcomb.o',
-    source = ['src/datastructures_bench/priority_queue_bench.c'],
+    source = ['src/datastructures_bench/datastructures_bench.c'],
     CPPDEFINES = ['USE_FLATCOMB',
                   'USE_PAIRING_HEAP'] + numa_structure_defines())
 env.Program(
