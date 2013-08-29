@@ -386,7 +386,6 @@ void pin(int thread_id){
     }else if(core_in_node != 0){
         core_in_node = core_in_node / 2;
     }
-    printf("core in node %d\n", core_in_node);
 #endif
     if(0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE)){
         next_numa_node++;
