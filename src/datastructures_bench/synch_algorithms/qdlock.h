@@ -460,10 +460,11 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
 #endif
             }
         }else{
-            for(int i = 0; i < 7;i++){
+            while(tataslock_is_locked(&lock->lock)){
                 if(drmvqueue_offer(&lock->writeQueue, e)){
                     return;
                 }else{
+                    __sync_synchronize();
                     __sync_synchronize();
                 }
             }

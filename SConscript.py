@@ -387,6 +387,17 @@ env.Program(
 
 #-----------------------------------------------------------------
 
+pairing_heap_bench_hqdlock_object = env.Object(
+    target = 'pairing_heap_bench_hqdlock.o',
+    source = ['src/datastructures_bench/datastructures_bench.c'],
+    CPPDEFINES = ['USE_HQDLOCK', 
+                  'USE_PAIRING_HEAP'] + numa_structure_defines())
+env.Program(
+    target = 'pairing_heap_bench_hqdlock',
+    source = [pairing_heap_bench_hqdlock_object])
+
+#-----------------------------------------------------------------
+
 pairing_heap_bench_ccsynch_object = env.Object(
     target = 'pairing_heap_bench_ccsynch.o',
     source = ['src/datastructures_bench/datastructures_bench.c'],

@@ -11,6 +11,7 @@
 
 typedef pthread_mutex_t CLHLockStruct;
 
+
 inline static void clhLock(LockStruct *l, int pid) {
     pthread_mutex_lock(l);
 }
@@ -36,6 +37,7 @@ typedef union CLHLockNode {
 
 typedef struct CLHLockStruct {
     volatile CLHLockNode *Tail CACHE_ALIGN;
+    char pad1[128];
     //    volatile CLHLockNode *MyNode[N_THREADS] CACHE_ALIGN;
     //    volatile CLHLockNode *MyPred[N_THREADS] CACHE_ALIGN;
 } CLHLockStruct;
@@ -90,6 +92,12 @@ CLHLockStruct *clhLockInit(void) {
 
     return l;
 }
+
+void clhLockInitExisting(CLHLockStruct * l) {
+    l->Tail = getAlignedMemory(CACHE_LINE_SIZE, sizeof(CLHLockNode));
+    l->Tail->locked = false;
+}
+
 #endif
 
 #endif

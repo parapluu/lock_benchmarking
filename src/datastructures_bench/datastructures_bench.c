@@ -34,6 +34,71 @@ __thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
 #define NODE_FIRST_POLICY
 #endif
 
+//=======================
+//Benchmark mutable state (Important that they are all on separate cache lines)
+//=======================
+
+//Should be power of 2
+#define NUMBER_OF_ELEMENTS_IN_ARRAYS 64
+#define ELEMENT_POS_MASK (NUMBER_OF_ELEMENTS_IN_ARRAYS-1)
+#define ADD_RAND_NUM_MASK (1048576-1)
+#define FALSE_SHARING_SECURITY 128
+
+
+typedef struct SeedWrapperImpl{
+    char pad1[FALSE_SHARING_SECURITY];
+    unsigned short value[3];
+    char pad2[FALSE_SHARING_SECURITY - (3*sizeof(short))];
+} SeedWrapper;
+
+typedef struct BoolWrapperImpl{
+    char pad1[FALSE_SHARING_SECURITY];
+    bool value;
+    char pad2[FALSE_SHARING_SECURITY - sizeof(bool)];
+} BoolWrapper;
+
+
+typedef struct LockThreadLocalSeedImpl{
+    char pad1[FALSE_SHARING_SECURITY];
+    int thread_id;
+    unsigned short * seed;
+    char pad2[FALSE_SHARING_SECURITY];
+} LockThreadLocalSeed;
+
+
+//=======================
+//Benchmark mutable state (Important that they are all on separate cache lines)
+//=======================
+
+SeedWrapper write_d_rand_seed_wrapper __attribute__((aligned(64)));
+unsigned short * write_d_rand_seed = write_d_rand_seed_wrapper.value;
+
+BoolWrapper benchmarkStopedWrapper __attribute__((aligned(64)));
+bool * benchmarkStoped = &benchmarkStopedWrapper.value;
+
+BoolWrapper benchmarkStartedWrapper __attribute__((aligned(64)));
+bool * benchmarkStarted = &benchmarkStartedWrapper.value;
+
+SeedWrapper threadLocalSeeds[128] __attribute__((aligned(64)));
+
+//========================
+//Benchmark imutable state
+//========================
+
+typedef struct ImutableStateWrapperImpl{
+    char pad1[FALSE_SHARING_SECURITY];
+    int iterationsSpentCriticalWork;
+    int iterationsSpentNonCriticalWork;
+    double percentageDequeue;
+    char pad2[FALSE_SHARING_SECURITY];
+} ImutableStateWrapper;
+
+ImutableStateWrapper imsw  __attribute__((aligned(64))) = 
+{.iterationsSpentCriticalWork = 1,
+ .iterationsSpentNonCriticalWork = 0,
+ .percentageDequeue = 0.5};
+
+__thread unsigned short * myXsubi;
 
 
 //=======================
@@ -59,6 +124,41 @@ void lock_init(){
 }
 
 void lock_thread_init(){}
+
+#elif defined (USE_HQDLOCK)
+
+//#define WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT 1
+#define ACTIVATE_NO_CONTENTION_OPT
+//#define CAS_FETCH_AND_ADD
+
+#include "datastructures_bench/synch_algorithms/hqdlock.h"
+
+HQDLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    hqdlock_initialize(&lock, NULL);
+}
+
+void lock_thread_init(){
+    clhThreadLocalInit();
+}
+
+#elif defined (USE_HSYNCH)
+
+void enqueue_cs(int enqueueValue);
+int dequeue_cs();
+#include "datastructures_bench/synch_algorithms/hsynch.h"
+
+HSynchStruct lock __attribute__((aligned(64)));
+__thread HSynchThreadState thread_state __attribute__((aligned(64)));
+
+void lock_init(){
+    HSynchStructInit(&lock);
+}
+
+void lock_thread_init(){
+    HSynchThreadStateInit(&thread_state);
+}
 
 #elif defined (USE_CCSYNCH)
 
@@ -141,7 +241,7 @@ void datastructure_destroy(){
     destroy_heap(priority_queue.value);
 }
 
-#ifdef USE_QDLOCK
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -173,10 +273,18 @@ void dequeue_cs(int notUsed, int * resultLocation){
 }
 
 inline void enqueue(int value){
+#ifdef USE_QDLOCK
     adxlock_delegate(&lock, &enqueue_cs, value); 
+#else
+    hqdlock_delegate(&lock, &enqueue_cs, value);
+#endif
 }
 inline int dequeue(){
+#ifdef USE_QDLOCK
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
+#else
+    return hqdlock_write_with_response_block(&lock, &dequeue_cs, 0);
+#endif
 }
 
 #elif defined (USE_CCSYNCH) || defined (USE_HSYNCH)
@@ -286,78 +394,145 @@ inline int dequeue(){
 #endif // lock spesific
 
 #endif //USE Pairing heap
+
+#ifdef USE_MICRO_BENCH
+
+#define GLOBAL_ARRAY_SIZE 64
+
+typedef struct CacheLinePaddedArrayImpl{
+    char pad1[128];
+    int array[GLOBAL_ARRAY_SIZE];
+    char pad2[128];
+} CacheLinePaddedArray;
+
+CacheLinePaddedArray global_array  __attribute__((aligned(64)));
+
+void datastructure_init(){
+    for(int i = 0; i < GLOBAL_ARRAY_SIZE; i++){
+        global_array[i] = 0;
+    }
+}
+
+void datastructure_thread_init(){}
+
+void datastructure_destroy(){}
+
+#ifdef USE_QDLOCK
+
+inline void cs_work(){
+    unsigned short * xsubi = myXsubi;
+    for(int i = 0; i < imsw.iterationsSpentInWriteCriticalSection; i++){
+        int writeToPos1 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);
+        int randomNumber = (int)jrand48(xsubi) & ADD_RAND_NUM_MASK;
+        global_array[writeToPos1] = global_array[writeToPos1] + randomNumber;
+        int writeToPos2 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);
+        global_array[writeToPos2] = global_array[writeToPos2] - randomNumber;
+    }
+}
+
+void enqueue_cs(int enqueueValue, int * notUsed){
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+    cs_work();
+}
+
+void dequeue_cs(int notUsed, int * resultLocation){
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    cs_work();
+    *resultLocation = -1;
+}
+
+inline void enqueue(int value){
+    adxlock_delegate(&lock, &enqueue_cs, value); 
+}
+inline int dequeue(){
+    return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
+}
+
+#elif defined (USE_CCSYNCH) || defined (USE_HSYNCH)
+
+void enqueue_cs(int enqueueValue){
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+    cs_work();
+}
+
+int dequeue_cs(){
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    cs_work();
+    return -1;
+}
+
+
+#ifdef USE_CCSYNCH
+
+inline static void enqueue(int value){
+    applyOp(&lock, &thread_state, value, 0/*Not used*/);
+}
+inline static int dequeue(){
+    return applyOp(&lock, &thread_state, DEQUEUE_ARG, 0/*Not used*/);
+}
+
+#elif defined (USE_HSYNCH)
+
+inline static void enqueue(int value){
+#ifdef PINNING
+    int my_numa_node = numa_node.value;
+#else
+    int my_numa_node = sched_getcpu() % NUMBER_OF_NUMA_NODES;
+#endif
+    applyOp(&lock, &thread_state, value, my_numa_node);
+}
+inline static int dequeue(){
+#ifdef PINNING
+    int my_numa_node = numa_node.value;
+#else
+    int my_numa_node = sched_getcpu() % NUMBER_OF_NUMA_NODES;
+#endif
+    return applyOp(&lock, &thread_state, DEQUEUE_ARG, my_numa_node);
+}
+
+#endif
+
+#elif defined (USE_FLATCOMB)
+
+void enqueue_cs(int enqueueValue){
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+    cs_work();
+}
+
+int dequeue_cs(){
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    cs_work();
+    return -1;
+}
+
+inline void enqueue(int value){
+    do_op(&lock, &thread_state, value);
+}
+inline int dequeue(){
+    return do_op(&lock, &thread_state, _DEQ_VALUE);
+}
+
+#endif // lock spesific
+
+#endif //USE Micro Bench
+
 //<<<<<<<<<<<<<<<<<<<<<<<
 // Datastructure depended code
 //<<<<<<<<<<<<<<<<<<<<<<<
 //=======================
 
-
-
-//=======================
-//Benchmark mutable state (Important that they are all on separate cache lines)
-//=======================
-
-//Should be power of 2
-#define NUMBER_OF_ELEMENTS_IN_ARRAYS 64
-#define ELEMENT_POS_MASK (NUMBER_OF_ELEMENTS_IN_ARRAYS-1)
-#define ADD_RAND_NUM_MASK (1048576-1)
-#define FALSE_SHARING_SECURITY 128
-
-
-typedef struct SeedWrapperImpl{
-    char pad1[FALSE_SHARING_SECURITY];
-    unsigned short value[3];
-    char pad2[FALSE_SHARING_SECURITY - (3*sizeof(short))];
-} SeedWrapper;
-
-typedef struct BoolWrapperImpl{
-    char pad1[FALSE_SHARING_SECURITY];
-    bool value;
-    char pad2[FALSE_SHARING_SECURITY - sizeof(bool)];
-} BoolWrapper;
-
-
-typedef struct LockThreadLocalSeedImpl{
-    char pad1[FALSE_SHARING_SECURITY];
-    int thread_id;
-    unsigned short * seed;
-    char pad2[FALSE_SHARING_SECURITY];
-} LockThreadLocalSeed;
-
-
-//=======================
-//Benchmark mutable state (Important that they are all on separate cache lines)
-//=======================
-
-SeedWrapper write_d_rand_seed_wrapper __attribute__((aligned(64)));
-unsigned short * write_d_rand_seed = write_d_rand_seed_wrapper.value;
-
-BoolWrapper benchmarkStopedWrapper __attribute__((aligned(64)));
-bool * benchmarkStoped = &benchmarkStopedWrapper.value;
-
-BoolWrapper benchmarkStartedWrapper __attribute__((aligned(64)));
-bool * benchmarkStarted = &benchmarkStartedWrapper.value;
-
-SeedWrapper threadLocalSeeds[128] __attribute__((aligned(64)));
-
-//========================
-//Benchmark imutable state
-//========================
-
-typedef struct ImutableStateWrapperImpl{
-    char pad1[FALSE_SHARING_SECURITY];
-    int iterationsSpentCriticalWork;
-    int iterationsSpentNonCriticalWork;
-    double percentageDequeue;
-    char pad2[FALSE_SHARING_SECURITY];
-} ImutableStateWrapper;
-
-ImutableStateWrapper imsw  __attribute__((aligned(64))) = 
-{.iterationsSpentCriticalWork = 1,
- .iterationsSpentNonCriticalWork = 0,
- .percentageDequeue = 0.5};
-
-__thread unsigned short * myXsubi;
 
 #ifdef PINNING
 
