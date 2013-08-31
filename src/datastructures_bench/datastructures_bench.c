@@ -211,6 +211,20 @@ void lock_thread_init(){
     thread_state.value = NULL;
 }
 
+#elif defined (USE_CLH)
+
+#include "datastructures_bench/synch_algorithms/clh.h"
+
+CLHLockStruct lock __attribute__((aligned(64)));
+
+void lock_init(){
+    clhLockInitExisting(&lock);
+}
+
+void lock_thread_init(){
+    clhThreadLocalInit();
+}
+
 #endif
 //<<<<<<<<<<<<<<<<<<<<<<<
 // END Lock depended code
@@ -389,6 +403,42 @@ inline void enqueue(int value){
 inline int dequeue(){
     return do_op(&lock, &thread_state, _DEQ_VALUE);
     //adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
+}
+
+#elif defined (USE_CLH)
+
+inline void enqueue(int value){
+    clhLock(&lock, 0/*Not used*/);
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+#ifdef DEBUG_PRINT_IN_CS
+    printf("ENQ CS %d\n", enqueueValue);
+#endif
+    priority_queue.value = 
+        insert(priority_queue.value, value);
+    clhUnlock(&lock, 0/*Not used*/);
+}
+inline int dequeue(){
+    int result;
+    clhLock(&lock, 0/*Not used*/);
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    if(priority_queue.value != NULL){
+        result = top(priority_queue.value);
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", result);
+#endif
+        priority_queue.value = pop(priority_queue.value);
+    }else{
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
+        result = -1;
+    }
+    clhUnlock(&lock, 0/*Not used*/);
+    return result;
 }
 
 #endif // lock spesific

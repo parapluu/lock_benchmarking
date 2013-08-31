@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <pthread.h>
-
+#include "synch_algs_config.h"
 #include "synch_algs_primitives.h"
 
 #ifdef POSIX_LOCKS

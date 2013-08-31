@@ -429,6 +429,17 @@ env.Program(
     target = 'pairing_heap_bench_flatcomb',
     source = [pairing_heap_bench_flatcomb_object])
 
+#-----------------------------------------------------------------
+
+pairing_heap_bench_clh_object = env.Object(
+    target = 'pairing_heap_bench_clh.o',
+    source = ['src/datastructures_bench/datastructures_bench.c'],
+    CPPDEFINES = ['USE_CLH',
+                  'USE_PAIRING_HEAP'] + numa_structure_defines())
+env.Program(
+    target = 'pairing_heap_bench_clh',
+    source = [pairing_heap_bench_clh_object])
+
 #############
 #Copy scripts
 #############
