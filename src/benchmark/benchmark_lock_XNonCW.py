@@ -85,13 +85,13 @@ for benchmark_id in [benchmark_name + "_" + lock_id
                     command = [bin_dir_path + '/' + benchmark_id,tc,pr,rts,iw,ir,non_cs_work]
                     print command
                     if pinning=='no':
-                        process = subprocess.Popen(command, stdout=outfile)
-                        process.wait()
+                        outString = subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0]
+                        outfile.write(str(non_cs_work) + " " + outString.split(" ")[1])
                     else:
                         max_node_id = (int(tc)-1) / num_of_cpus_per_node
                         nomactrl = ['numactl', '--cpunodebind=' + ",".join([str(x) for x in range(0,max_node_id+1)])]
-                        process = subprocess.Popen(nomactrl + command, stdout=outfile)
-                        process.wait()
+                        outString = subprocess.Popen(nomactrl + command, stdout=subprocess.PIPE).communicate()[0]
+                        outfile.write(str(non_cs_work) + " " + outString.split(" ")[1])
                 print "\n\n\033[32m -- BENCHMARKS FOR " + output_file_str + " COMPLETED! -- \033[m\n\n"
 
 
