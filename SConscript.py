@@ -285,6 +285,7 @@ lock_specific_object_defs = OrderedDict([
 #Located in src/benchmark/
 benchmarks_scripts = ['compare_benchmarks.py',
                       'benchmark_lock.py',
+                      'benchmark_lock_XNonCW.py',
                       'run_benchmarks_on_intel_i7.py',
                       'run_benchmarks_on_sandy.py',
                       'run_benchmarks_on_amd_fx_6100.py']
