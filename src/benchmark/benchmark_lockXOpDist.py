@@ -77,7 +77,7 @@ for benchmark_id in [benchmark_name + "_" + lock_id
             if not os.path.exists(output_file_dir_str):
                 os.makedirs(output_file_dir_str)
             output_file_str = (output_file_dir_str +
-                               'xncw_' + pinning + '_' + '_'.join(settings) + '.dat')
+                               'xodi_' + pinning + '_' + '_'.join(settings) + '.dat')
             with open(output_file_str, "w") as outfile:
                 print "\n\n\033[32m -- STARTING BENCHMARKS FOR " + output_file_str + "! -- \033[m\n\n"
                 for pr in percentages_reads:
