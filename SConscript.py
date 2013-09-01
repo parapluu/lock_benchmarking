@@ -377,70 +377,95 @@ env.Program(
 #Data structure benchmark
 #########################
 
+locked_data_stuctures = [
+    {'data_structure_define': 'USE_PAIRING_HEAP',
+     'data_structure_alias' : 'pairing_heap'},
+    {'data_structure_define': 'USE_MICRO_BENCH',
+     'data_structure_alias' : 'micro_bench'}]
 
-pairing_heap_bench_qdlock_object = env.Object(
-    target = 'pairing_heap_bench_qdlock.o',
-    source = ['src/datastructures_bench/datastructures_bench.c'],
-    CPPDEFINES = ['USE_QDLOCK', 
-                  'USE_PAIRING_HEAP'] + numa_structure_defines())
-env.Program(
-    target = 'pairing_heap_bench_qdlock',
-    source = [pairing_heap_bench_qdlock_object])
+benchmarked_locks = [
+    {'lock_define': 'USE_QDLOCK',
+     'lock_alias' : 'qdlock'},
+    {'lock_define': 'USE_HQDLOCK',
+     'lock_alias' : 'hqdlock'},
+    {'lock_define': 'USE_CCSYNCH',
+     'lock_alias' : 'ccsynch'},
+    {'lock_define': 'USE_HSYNCH',
+     'lock_alias' : 'hsynch'},
+    {'lock_define': 'USE_FLATCOMB',
+     'lock_alias' : 'flatcomb'},
+    {'lock_define': 'USE_CLH',
+     'lock_alias' : 'clh'}]
 
-#-----------------------------------------------------------------
+for locked_data_stucture in locked_data_stuctures:
+    for benchmarked_lock in benchmarked_locks:
+        data_structure_define = locked_data_stucture['data_structure_define']
+        data_structure_alias = locked_data_stucture['data_structure_alias']
+        lock_define = benchmarked_lock['lock_define']
+        lock_alias = benchmarked_lock['lock_alias']
+        object = env.Object(
+            target = (data_structure_alias + '_' + lock_alias + '.o'),
+            source = ['src/datastructures_bench/datastructures_bench.c'],
+            CPPDEFINES = [lock_define, 
+                          data_structure_define] + numa_structure_defines())
+        env.Program(
+            target = (data_structure_alias + '_' + lock_alias),
+            source = [object])
 
-pairing_heap_bench_hqdlock_object = env.Object(
-    target = 'pairing_heap_bench_hqdlock.o',
-    source = ['src/datastructures_bench/datastructures_bench.c'],
-    CPPDEFINES = ['USE_HQDLOCK', 
-                  'USE_PAIRING_HEAP'] + numa_structure_defines())
-env.Program(
-    target = 'pairing_heap_bench_hqdlock',
-    source = [pairing_heap_bench_hqdlock_object])
+# #-----------------------------------------------------------------
 
-#-----------------------------------------------------------------
+# pairing_heap_bench_hqdlock_object = env.Object(
+#     target = 'pairing_heap_bench_hqdlock.o',
+#     source = ['src/datastructures_bench/datastructures_bench.c'],
+#     CPPDEFINES = ['USE_HQDLOCK', 
+#                   'USE_PAIRING_HEAP'] + numa_structure_defines())
+# env.Program(
+#     target = 'pairing_heap_bench_hqdlock',
+#     source = [pairing_heap_bench_hqdlock_object])
 
-pairing_heap_bench_ccsynch_object = env.Object(
-    target = 'pairing_heap_bench_ccsynch.o',
-    source = ['src/datastructures_bench/datastructures_bench.c'],
-    CPPDEFINES = ['USE_CCSYNCH', 
-                  'USE_PAIRING_HEAP'] + numa_structure_defines())
-env.Program(
-    target = 'pairing_heap_bench_ccsynch',
-    source = [pairing_heap_bench_ccsynch_object])
+# #-----------------------------------------------------------------
 
-#-----------------------------------------------------------------
+# pairing_heap_bench_ccsynch_object = env.Object(
+#     target = 'pairing_heap_bench_ccsynch.o',
+#     source = ['src/datastructures_bench/datastructures_bench.c'],
+#     CPPDEFINES = ['USE_CCSYNCH', 
+#                   'USE_PAIRING_HEAP'] + numa_structure_defines())
+# env.Program(
+#     target = 'pairing_heap_bench_ccsynch',
+#     source = [pairing_heap_bench_ccsynch_object])
 
-pairing_heap_bench_hsynch_object = env.Object(
-    target = 'pairing_heap_bench_hsynch.o',
-    source = ['src/datastructures_bench/datastructures_bench.c'],
-    CPPDEFINES = ['USE_HSYNCH', 
-                  'USE_PAIRING_HEAP'] + numa_structure_defines())
-env.Program(
-    target = 'pairing_heap_bench_hsynch',
-    source = [pairing_heap_bench_hsynch_object])
+# #-----------------------------------------------------------------
 
-#-----------------------------------------------------------------
+# pairing_heap_bench_hsynch_object = env.Object(
+#     target = 'pairing_heap_bench_hsynch.o',
+#     source = ['src/datastructures_bench/datastructures_bench.c'],
+#     CPPDEFINES = ['USE_HSYNCH', 
+#                   'USE_PAIRING_HEAP'] + numa_structure_defines())
+# env.Program(
+#     target = 'pairing_heap_bench_hsynch',
+#     source = [pairing_heap_bench_hsynch_object])
 
-pairing_heap_bench_flatcomb_object = env.Object(
-    target = 'pairing_heap_bench_flatcomb.o',
-    source = ['src/datastructures_bench/datastructures_bench.c'],
-    CPPDEFINES = ['USE_FLATCOMB',
-                  'USE_PAIRING_HEAP'] + numa_structure_defines())
-env.Program(
-    target = 'pairing_heap_bench_flatcomb',
-    source = [pairing_heap_bench_flatcomb_object])
+# #-----------------------------------------------------------------
 
-#-----------------------------------------------------------------
+# pairing_heap_bench_flatcomb_object = env.Object(
+#     target = 'pairing_heap_bench_flatcomb.o',
+#     source = ['src/datastructures_bench/datastructures_bench.c'],
+#     CPPDEFINES = ['USE_FLATCOMB',
+#                   'USE_PAIRING_HEAP'] + numa_structure_defines())
+# env.Program(
+#     target = 'pairing_heap_bench_flatcomb',
+#     source = [pairing_heap_bench_flatcomb_object])
 
-pairing_heap_bench_clh_object = env.Object(
-    target = 'pairing_heap_bench_clh.o',
-    source = ['src/datastructures_bench/datastructures_bench.c'],
-    CPPDEFINES = ['USE_CLH',
-                  'USE_PAIRING_HEAP'] + numa_structure_defines())
-env.Program(
-    target = 'pairing_heap_bench_clh',
-    source = [pairing_heap_bench_clh_object])
+# #-----------------------------------------------------------------
+
+# pairing_heap_bench_clh_object = env.Object(
+#     target = 'pairing_heap_bench_clh.o',
+#     source = ['src/datastructures_bench/datastructures_bench.c'],
+#     CPPDEFINES = ['USE_CLH',
+#                   'USE_PAIRING_HEAP'] + numa_structure_defines())
+# env.Program(
+#     target = 'pairing_heap_bench_clh',
+#     source = [pairing_heap_bench_clh_object])
 
 #############
 #Copy scripts

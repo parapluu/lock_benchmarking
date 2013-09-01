@@ -445,13 +445,16 @@ inline int dequeue(){
 
 #endif //USE Pairing heap
 
+//###############
+//micro bench
+//###############
 #ifdef USE_MICRO_BENCH
 
 #define GLOBAL_ARRAY_SIZE 64
 
 typedef struct CacheLinePaddedArrayImpl{
     char pad1[128];
-    int array[GLOBAL_ARRAY_SIZE];
+    int value[GLOBAL_ARRAY_SIZE];
     char pad2[128];
 } CacheLinePaddedArray;
 
@@ -459,7 +462,7 @@ CacheLinePaddedArray global_array  __attribute__((aligned(64)));
 
 void datastructure_init(){
     for(int i = 0; i < GLOBAL_ARRAY_SIZE; i++){
-        global_array[i] = 0;
+        global_array.value[i] = 0;
     }
 }
 
@@ -467,18 +470,18 @@ void datastructure_thread_init(){}
 
 void datastructure_destroy(){}
 
-#ifdef USE_QDLOCK
-
 inline void cs_work(){
     unsigned short * xsubi = myXsubi;
-    for(int i = 0; i < imsw.iterationsSpentInWriteCriticalSection; i++){
+    for(int i = 0; i < imsw.iterationsSpentCriticalWork; i++){
         int writeToPos1 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);
         int randomNumber = (int)jrand48(xsubi) & ADD_RAND_NUM_MASK;
-        global_array[writeToPos1] = global_array[writeToPos1] + randomNumber;
+        global_array.value[writeToPos1] = global_array.value[writeToPos1] + randomNumber;
         int writeToPos2 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);
-        global_array[writeToPos2] = global_array[writeToPos2] - randomNumber;
+        global_array.value[writeToPos2] = global_array.value[writeToPos2] - randomNumber;
     }
 }
+
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -492,14 +495,22 @@ void dequeue_cs(int notUsed, int * resultLocation){
     dequeues_executed.value++;
 #endif
     cs_work();
-    *resultLocation = -1;
+    *resultLocation = 1;
 }
 
 inline void enqueue(int value){
-    adxlock_delegate(&lock, &enqueue_cs, value); 
+#ifdef USE_QDLOCK
+    adxlock_delegate(&lock, &enqueue_cs, value);
+#else
+    hqdlock_delegate(&lock, &enqueue_cs, value);
+#endif
 }
 inline int dequeue(){
+#ifdef USE_QDLOCK
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
+#else
+    hqdlock_write_with_response_block(&lock, &dequeue_cs, 0);
+#endif
 }
 
 #elif defined (USE_CCSYNCH) || defined (USE_HSYNCH)
@@ -518,7 +529,6 @@ int dequeue_cs(){
     cs_work();
     return -1;
 }
-
 
 #ifdef USE_CCSYNCH
 
@@ -564,7 +574,7 @@ int dequeue_cs(){
     dequeues_executed.value++;
 #endif
     cs_work();
-    return -1;
+    return 1;
 }
 
 inline void enqueue(int value){
@@ -572,6 +582,26 @@ inline void enqueue(int value){
 }
 inline int dequeue(){
     return do_op(&lock, &thread_state, _DEQ_VALUE);
+}
+
+#elif defined (USE_CLH)
+
+inline void enqueue(int value){
+    clhLock(&lock, 0/*Not used*/);
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+    cs_work();
+    clhUnlock(&lock, 0/*Not used*/);
+}
+inline int dequeue(){
+    clhLock(&lock, 0/*Not used*/);
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    cs_work();
+    clhUnlock(&lock, 0/*Not used*/);
+    return 1;
 }
 
 #endif // lock spesific
