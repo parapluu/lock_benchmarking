@@ -379,7 +379,7 @@ env.Program(
 
 locked_data_stuctures = [
     {'data_structure_define': 'USE_PAIRING_HEAP',
-     'data_structure_alias' : 'pairing_heap'},
+     'data_structure_alias' : 'pairing_heap_bench'},
     {'data_structure_define': 'USE_MICRO_BENCH',
      'data_structure_alias' : 'micro_bench'}]
 
@@ -397,7 +397,7 @@ benchmarked_locks = [
     {'lock_define': 'USE_CLH',
      'lock_alias' : 'clh'},
     {'lock_define': 'USE_QDLOCKP',
-     'lock_alias' : 'qdlockp'}]
+     'lock_alias' : 'qdlockp'}] 
 
 for locked_data_stucture in locked_data_stuctures:
     for benchmarked_lock in benchmarked_locks:
