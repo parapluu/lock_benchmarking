@@ -608,6 +608,40 @@ inline int dequeue(){
 
 #endif //USE Micro Bench
 
+//######################
+// shared fetch and add
+//######################
+
+#ifdef USE_SHARED_FETCH_AND_ADD
+
+typedef struct CacheLinePaddedFaAWord{
+    char pad1[128];
+    int value;
+    char pad2[128];
+} CacheLinePaddedFaAWord;
+
+CacheLinePaddedFaAWord fetchAndAddWord  __attribute__((aligned(64)));
+
+void datastructure_init(){
+    fetchAndAddWord.value = 0;
+}
+
+void lock_init(){}
+
+void lock_thread_init(){}
+
+void datastructure_thread_init(){}
+
+void datastructure_destroy(){}
+
+inline void enqueue(int value){
+    __sync_fetch_and_add(&fetchAndAddWord.value, 1);
+}
+inline int dequeue(){
+    return __sync_fetch_and_add(&fetchAndAddWord.value, 1);    
+}
+#endif
+
 //<<<<<<<<<<<<<<<<<<<<<<<
 // Datastructure depended code
 //<<<<<<<<<<<<<<<<<<<<<<<

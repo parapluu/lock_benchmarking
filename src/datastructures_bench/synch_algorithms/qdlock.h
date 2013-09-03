@@ -200,6 +200,9 @@ typedef struct DelegateRequestEntryImpl {
     void (*request)(int, int*);
     int data;
     int * responseLocation;
+#ifdef PAD_OP_WITH_OPS
+    
+#endif
 } DelegateRequestEntry;
 
 typedef struct DRMWQImpl {
