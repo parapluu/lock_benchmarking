@@ -19,6 +19,9 @@
 //#define DEBUG_PRINT_OUTSIDE_CS
 //#define SANITY_CHECK
 
+#define DEBUG_COUNT_OPS_PER_FLUSH
+
+
 #ifdef SANITY_CHECK
 CacheLinePaddedInt dequeues_executed = {.value = 0};
 CacheLinePaddedInt enqueues_executed = {.value = 0};
@@ -124,6 +127,20 @@ void lock_init(){
 }
 
 void lock_thread_init(){}
+
+
+#elif defined (USE_QDLOCKP)
+
+#include "datastructures_bench/synch_algorithms/qdlockp.h"
+
+AgnosticDXLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    adxlock_initialize(&lock, NULL);
+}
+
+void lock_thread_init(){}
+
 
 #elif defined (USE_HQDLOCK)
 
@@ -255,7 +272,7 @@ void datastructure_destroy(){
     destroy_heap(priority_queue.value);
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -287,14 +304,14 @@ void dequeue_cs(int notUsed, int * resultLocation){
 }
 
 inline void enqueue(int value){
-#ifdef USE_QDLOCK
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     adxlock_delegate(&lock, &enqueue_cs, value); 
 #else
     hqdlock_delegate(&lock, &enqueue_cs, value);
 #endif
 }
 inline int dequeue(){
-#ifdef USE_QDLOCK
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #else
     return hqdlock_write_with_response_block(&lock, &dequeue_cs, 0);
@@ -481,7 +498,7 @@ inline void cs_work(){
     }
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -499,17 +516,17 @@ void dequeue_cs(int notUsed, int * resultLocation){
 }
 
 inline void enqueue(int value){
-#ifdef USE_QDLOCK
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     adxlock_delegate(&lock, &enqueue_cs, value);
 #else
     hqdlock_delegate(&lock, &enqueue_cs, value);
 #endif
 }
 inline int dequeue(){
-#ifdef USE_QDLOCK
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #else
-    hqdlock_write_with_response_block(&lock, &dequeue_cs, 0);
+    return hqdlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #endif
 }
 

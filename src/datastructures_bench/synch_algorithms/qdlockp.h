@@ -189,7 +189,13 @@ bool tataslock_is_locked(TATASLock *lock){
 
 inline
 bool tataslock_try_write_read_lock(TATASLock *lock) {
-    return !__sync_lock_test_and_set(&lock->lockWord.value, true);
+    bool locked;
+    load_acq(locked, lock->lockWord.value);
+    if(!locked){
+        return !__sync_lock_test_and_set(&lock->lockWord.value, true);
+    }else{
+        return false;
+    }
 }
 
 //Multi write queue
@@ -203,8 +209,6 @@ typedef struct DelegateRequestEntryImpl {
 } DelegateRequestEntry;
 
 typedef struct DRMWQImpl {
-    char padd1[64];
-    CacheLinePaddedBool closed;
     char padd2[64];
     CacheLinePaddedULong elementCount;
     DelegateRequestEntry elements[MWQ_CAPACITY];
@@ -256,7 +260,6 @@ DRMWQueue * drmvqueue_initialize(DRMWQueue * queue){
         queue->elements[i].responseLocation = NULL;
     }
     queue->elementCount.value = MWQ_CAPACITY;
-    queue->closed.value = true;
     __sync_synchronize();
     return queue;
 }
@@ -267,104 +270,68 @@ void drmvqueue_free(DRMWQueue * queue){
 
 inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
-    bool closed;
-    load_acq(closed, queue->closed.value);
-    if(!closed){
-        int index = FETCH_AND_ADD(&queue->elementCount.value, 1);
-        if(index < MWQ_CAPACITY){
-            store_rel(queue->elements[index].responseLocation, e.responseLocation);
-            store_rel(queue->elements[index].data, e.data);
-            store_rel(queue->elements[index].request, e.request);
-            __sync_synchronize();//Flush
-            return true;
-        }else{
-            store_rel(queue->closed.value, true);
-            __sync_synchronize();//Flush
-            return false;
-        }
+    int check;
+    load_acq(check, queue->elementCount.value);
+    if(check >= MWQ_CAPACITY){
+        return false;
+    }
+    int index = FETCH_AND_ADD(&queue->elementCount.value, 1);
+    if(index < MWQ_CAPACITY){
+        store_rel(queue->elements[index].responseLocation, e.responseLocation);
+        store_rel(queue->elements[index].data, e.data);
+        store_rel(queue->elements[index].request, e.request);
+        __sync_synchronize();//Flush
+        return true;
     }else{
         return false;
     }
+
 }
 //#define QUEUE_STATS
 #ifdef QUEUE_STATS
 __thread int flush_dequeus = 0;
 __thread int flushs = 0;
-#endif
+#endif 
 
 inline
 void drmvqueue_flush(DRMWQueue * queue){
-    unsigned long numOfElementsToRead;
-    unsigned long newNumOfElementsToRead;
-    unsigned long currentElementIndex = 0;
-    bool closed = false;
-    load_acq(numOfElementsToRead, queue->elementCount.value);
-    if(numOfElementsToRead >= MWQ_CAPACITY){
-        closed = true;
-        numOfElementsToRead = MWQ_CAPACITY;
-    }
-
-    while(true){
-        if(currentElementIndex < numOfElementsToRead){
-            //There is definitly an element that we should read
+    int closed = false;
+    int index = 0;
+    int todo = 0;
+    int done = todo;
+    while (done < MWQ_CAPACITY) {
+        done = todo;
+        load_acq(todo, queue->elementCount.value);
+        if (todo == done) { /* close queue */
+            todo = get_and_set_ulong(&queue->elementCount.value, MWQ_CAPACITY);
+            done = MWQ_CAPACITY;
+        }
+        if(todo >= MWQ_CAPACITY){
+            todo = MWQ_CAPACITY;
+            done = MWQ_CAPACITY;
+        }
+        for ( ; index < todo ; index++) {
             DelegateRequestEntry e;
-            load_acq(e.request, queue->elements[currentElementIndex].request);
-            load_acq(e.data, queue->elements[currentElementIndex].data);
-            load_acq(e.responseLocation, queue->elements[currentElementIndex].responseLocation);
+            load_acq(e.request, queue->elements[index].request);
+            load_acq(e.data, queue->elements[index].data);
+            load_acq(e.responseLocation, queue->elements[index].responseLocation);
             while(e.request == NULL) {
                 __sync_synchronize();
-                load_acq(e.request, queue->elements[currentElementIndex].request);
-                load_acq(e.data, queue->elements[currentElementIndex].data);
-                load_acq(e.responseLocation, queue->elements[currentElementIndex].responseLocation);
+                load_acq(e.request, queue->elements[index].request);
+                load_acq(e.data, queue->elements[index].data);
+                load_acq(e.responseLocation, queue->elements[index].responseLocation);
             }
             e.request(e.data, e.responseLocation);
-            store_rel(queue->elements[currentElementIndex].request, NULL);
-            currentElementIndex = currentElementIndex + 1;
-        }else if (closed){
-            //The queue is closed and there is no more elements that need to be read:
-            return;
-        }else{
-            //Seems like there are no elements that should be read and the queue is
-            //not closed. Check again if there are still no more elements that should
-            //be read before closing the queue
-#ifdef WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT
-            for(int i = 0; i < WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT; i++){
-                __sync_synchronize();                
-            }
-#endif
-            load_acq(newNumOfElementsToRead, queue->elementCount.value);
-            if(newNumOfElementsToRead == numOfElementsToRead){
-                //numOfElementsToRead has not changed. Close the queue.
-                numOfElementsToRead = 
-                    min(get_and_set_ulong(&queue->elementCount.value, MWQ_CAPACITY + 1), 
-                        MWQ_CAPACITY);
-#ifdef QUEUE_STATS
-		in_queue = in_queue + numOfElementsToRead;
-		flushs++;
-		if(flushs % 100 == 0)
-		  printf("%d %d ratio: %f\n", in_queue, flushs, ((float)in_queue) / flushs);
-#endif
-		closed = true;
-            }else if(newNumOfElementsToRead < MWQ_CAPACITY){
-                numOfElementsToRead = newNumOfElementsToRead;
-            }else{
-#ifdef QUEUE_STATS
-		in_queue = in_queue + numOfElementsToRead;
-		flushs++;
-		if(flushs % 100 == 0)
-		  printf("%d %d ratio: %f\n", in_queue, flushs, ((float)in_queue) / flushs);
-#endif
-                closed = true;
-                numOfElementsToRead = MWQ_CAPACITY;
-            }
+            store_rel(queue->elements[index].request, NULL);
         }
     }
 }
+    
+
 
 inline
 void drmvqueue_reset_fully_read(DRMWQueue * queue){
     store_rel(queue->elementCount.value, 0);
-    store_rel(queue->closed.value, false);
 }
 
 
@@ -409,63 +376,22 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
                                  void (*delgateFun)(int, int *), 
                                  int data, 
                                  int * responseLocation){
-    int counter = 0;
     DelegateRequestEntry e;
     e.request = delgateFun;
     e.data = data;
     e.responseLocation = responseLocation;
-    do{
-        if(!tataslock_is_locked(&lock->lock)){
-            if(tataslock_try_write_read_lock(&lock->lock)){
-#ifdef ACTIVATE_NO_CONTENTION_OPT
-	        if(counter > 0){
-#endif
-                    drmvqueue_reset_fully_read(&lock->writeQueue);
-#ifdef STACK_OPT
-            if(e.request == &push_cs){
-                push_cs(e.data, NULL);
-            }else{
-                pop_cs(0, e.responseLocation);
-            }
-#else
-	    delgateFun(data, responseLocation);
-#endif
-                    drmvqueue_flush(&lock->writeQueue);
-                    tataslock_write_read_unlock(&lock->lock);
-                    return;
-#ifdef ACTIVATE_NO_CONTENTION_OPT
-	        }else{
-#ifdef STACK_OPT
-            if(e.request == &push_cs){
-                push_cs(e.data, NULL);
-            }else{
-                pop_cs(0, e.responseLocation);
-            }
-#else
-	    delgateFun(data, responseLocation);
-#endif
-		    tataslock_write_read_unlock(&lock->lock);
-		    return;
-                }
-#endif
-            }
-        }else{
-            while(tataslock_is_locked(&lock->lock)){
-                if(drmvqueue_offer(&lock->writeQueue, e)){
-                    return;
-                }else{
-                    __sync_synchronize();
-                    __sync_synchronize();
-                }
-            }
+    while (true) {
+        if(tataslock_try_write_read_lock(&lock->lock)){
+            drmvqueue_reset_fully_read(&lock->writeQueue);
+            delgateFun(data, responseLocation);
+            drmvqueue_flush(&lock->writeQueue);
+            tataslock_write_read_unlock(&lock->lock);
+            return;
+        } else if (drmvqueue_offer(&lock->writeQueue, e)){
+            return ;
         }
-        if((counter & 7) == 0){
-#ifdef USE_YIELD
-            sched_yield();
-#endif
-        }
-        counter = counter + 1;
-    }while(true);
+        sched_yield();
+    }
 }
 
 inline
