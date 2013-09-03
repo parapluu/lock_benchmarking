@@ -293,6 +293,81 @@ __thread int flush_dequeus = 0;
 __thread int flushs = 0;
 #endif 
 
+#define CAS_FLUSH
+//#define TACAS_FLUSH
+#ifdef CAS_FLUSH
+
+inline
+void drmvqueue_flush(DRMWQueue * queue){
+    int closed = false;
+    int index = 0;
+    int todo = 0;
+    int done = todo;
+    while (done < MWQ_CAPACITY) {
+        done = todo;
+        todo = __sync_val_compare_and_swap(&queue->elementCount.value, done, MWQ_CAPACITY);
+        if (todo == done) { /* close queue */
+            done = MWQ_CAPACITY;
+        }else if(todo >= MWQ_CAPACITY){
+            todo = MWQ_CAPACITY;
+            done = MWQ_CAPACITY;
+        }
+        for ( ; index < todo ; index++) {
+            DelegateRequestEntry e;
+            load_acq(e.request, queue->elements[index].request);
+            load_acq(e.data, queue->elements[index].data);
+            load_acq(e.responseLocation, queue->elements[index].responseLocation);
+            while(e.request == NULL) {
+                __sync_synchronize();
+                load_acq(e.request, queue->elements[index].request);
+                load_acq(e.data, queue->elements[index].data);
+                load_acq(e.responseLocation, queue->elements[index].responseLocation);
+            }
+            e.request(e.data, e.responseLocation);
+            store_rel(queue->elements[index].request, NULL);
+        }
+    }
+}
+
+#elif defined (TACAS_FLUSH)
+
+inline
+void drmvqueue_flush(DRMWQueue * queue){
+    int closed = false;
+    int index = 0;
+    int todo = 0;
+    int done = todo;
+    while (done < MWQ_CAPACITY) {
+        done = todo;
+        load_acq(todo, queue->elementCount.value);
+        if(done == todo){
+            todo = __sync_val_compare_and_swap(&queue->elementCount.value, done, MWQ_CAPACITY);
+        }
+        if (todo == done) { /* close queue */
+            done = MWQ_CAPACITY;
+        }else if(todo >= MWQ_CAPACITY){
+            todo = MWQ_CAPACITY;
+            done = MWQ_CAPACITY;
+        }
+        for ( ; index < todo ; index++) {
+            DelegateRequestEntry e;
+            load_acq(e.request, queue->elements[index].request);
+            load_acq(e.data, queue->elements[index].data);
+            load_acq(e.responseLocation, queue->elements[index].responseLocation);
+            while(e.request == NULL) {
+                __sync_synchronize();
+                load_acq(e.request, queue->elements[index].request);
+                load_acq(e.data, queue->elements[index].data);
+                load_acq(e.responseLocation, queue->elements[index].responseLocation);
+            }
+            e.request(e.data, e.responseLocation);
+            store_rel(queue->elements[index].request, NULL);
+        }
+    }
+}
+
+#else
+
 inline
 void drmvqueue_flush(DRMWQueue * queue){
     int closed = false;
@@ -326,6 +401,8 @@ void drmvqueue_flush(DRMWQueue * queue){
         }
     }
 }
+
+#endif
     
 
 
