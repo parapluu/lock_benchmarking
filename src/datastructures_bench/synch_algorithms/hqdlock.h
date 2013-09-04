@@ -194,7 +194,7 @@ bool tataslock_try_write_read_lock(TATASLock *lock) {
 
 //Multi write queue
 
-#define MWQ_CAPACITY 4048
+#define MWQ_CAPACITY 10000
 
 typedef struct DelegateRequestEntryImpl {
     void (*request)(int, int*);

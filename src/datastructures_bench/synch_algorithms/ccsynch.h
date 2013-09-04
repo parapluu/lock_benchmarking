@@ -11,7 +11,8 @@
 
 #define DEQUEUE_ARG INT_MIN
 
-const int CCSIM_HELP_BOUND = 3 * N_THREADS;
+const int CCSIM_HELP_BOUND = 10000;
+    //3 * N_THREADS;
 
 typedef struct HalfLockNode {
     char pad1[128];
