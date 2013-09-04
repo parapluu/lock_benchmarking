@@ -12,7 +12,7 @@
 #define DEQUEUE_ARG INT_MIN
 
 #define HSYNCH_NCLUSTERS                NUMBER_OF_NUMA_NODES
-const int HSYNCH_HELP_BOUND =           10000;
+const int HSYNCH_HELP_BOUND = MAX_NUM_OF_HELPED_OPS;
 //3 * N_THREADS;
 
 typedef struct HalfHSynchLockNode {

@@ -196,8 +196,8 @@ bool tataslock_try_write_read_lock(TATASLock *lock) {
 //Flat combining algorithm
 //From: https://github.com/mit-carbon/Flat-Combining
 
-#define _NUM_REP 64
-#define _REP_THRESHOLD 109
+#define _NUM_REP MAX_NUM_OF_HELPED_OPS
+#define _REP_THRESHOLD 1
 #define  _NULL_VALUE (0)
 #define  _DEQ_VALUE (INT_MIN)
 
@@ -276,6 +276,7 @@ inline void flat_combining(FlatComb * flatcomb) {
 #ifdef QUEUE_STATS
     helpSeasonsPerformed.value++;
 #endif
+    int total_changes = 0;
     for (int iTry=0;iTry<_NUM_REP; ++iTry) {
         //Memory::read_barrier();
         int num_changes=0;
@@ -298,13 +299,15 @@ inline void flat_combining(FlatComb * flatcomb) {
 
             load_acq(curr_slot, curr_slot->_next);
         }//while on slots
-#ifdef QUEUE_STATS
-        numberOfDeques.value = numberOfDeques.value + num_changes;
-#endif
-        if(num_changes < _REP_THRESHOLD)
+        total_changes = total_changes + num_changes;
+        if((num_changes < _REP_THRESHOLD) || 
+           (total_changes >= MAX_NUM_OF_HELPED_OPS))
             break;
         //Memory::write_barrier();
     }//for repetition
+#ifdef QUEUE_STATS
+    numberOfDeques.value = numberOfDeques.value + total_changes;
+#endif
 }
 
 
