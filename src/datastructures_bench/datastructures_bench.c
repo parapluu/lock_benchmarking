@@ -18,6 +18,12 @@
 //#define DEBUG_PRINT_IN_CS
 //#define DEBUG_PRINT_OUTSIDE_CS
 //#define SANITY_CHECK
+//#define QUEUE_STATS
+
+#ifdef QUEUE_STATS
+__thread CacheLinePaddedULong helpSeasonsPerformed __attribute__((aligned(128))) = {.value = 0};
+__thread CacheLinePaddedULong numberOfDeques __attribute__((aligned(128))) = {.value = 0};
+#endif
 
 #define DEBUG_COUNT_OPS_PER_FLUSH
 
@@ -28,6 +34,7 @@ CacheLinePaddedInt enqueues_executed = {.value = 0};
 CacheLinePaddedInt dequeues_issued = {.value = 0};
 CacheLinePaddedInt enqueues_issued = {.value = 0};
 #endif
+
 
 
 #ifdef PINNING
@@ -65,6 +72,12 @@ typedef struct LockThreadLocalSeedImpl{
     char pad1[FALSE_SHARING_SECURITY];
     int thread_id;
     unsigned short * seed;
+    //Write back
+    long totalNumerOfIterationsExecuted;
+#ifdef QUEUE_STATS
+    unsigned long helpSeasonsPerformed;
+    unsigned long numberOfDeques;
+#endif
     char pad2[FALSE_SHARING_SECURITY];
 } LockThreadLocalSeed;
 
@@ -788,12 +801,25 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
 
     globalDummy = dummy + privateArray[0];
 
-    return (void*)((long)totalNumberOfCriticalSections);
+#ifdef QUEUE_STATS
+#ifdef PRINT_THREAD_QUEUE_STATS
+    printf("h%ld\n", helpSeasonsPerformed.value);
+    printf("d%ld\n", numberOfDeques.value);
+#endif
+    lockThreadLocalSeed->helpSeasonsPerformed = helpSeasonsPerformed.value;
+    lockThreadLocalSeed->numberOfDeques = numberOfDeques.value;
+#endif
+    lockThreadLocalSeed->totalNumerOfIterationsExecuted = (long)totalNumberOfCriticalSections;
+    return lockThreadLocalSeed;
 }
 
 //================
 //Benchmark Runner
 //================
+
+#ifdef QUEUE_STATS
+double dequesPerFlush;
+#endif
 
 
 double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam, 
@@ -841,11 +867,21 @@ double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
     __sync_synchronize();
 
     long totalNumberOfOperations = 0;
+#ifdef QUEUE_STATS
+    long totalNumberOfFlushs = 0;
+    long totalNumberOfDeques = 0;
+#endif
     for(int i = 0; i < numberOfThreads; i++){
-        long threadNumberOfOperations;
-        pthread_join(threads[i],(void*)&threadNumberOfOperations);
+        LockThreadLocalSeed * threadInfo;
+        pthread_join(threads[i],(void*)&threadInfo);
+        long threadNumberOfOperations = threadInfo->totalNumerOfIterationsExecuted;
         totalNumberOfOperations = totalNumberOfOperations + threadNumberOfOperations;
+#ifdef QUEUE_STATS
+        totalNumberOfFlushs = totalNumberOfFlushs + threadInfo->helpSeasonsPerformed;
+        totalNumberOfDeques = totalNumberOfDeques + threadInfo->numberOfDeques;
+#endif
     }
+
     gettimeofday(&timeEnd, NULL);
 
     datastructure_destroy();
@@ -863,7 +899,16 @@ double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
 
     long benchmarRealTime = (timeEnd.tv_sec-timeStart.tv_sec)*1000000 + timeEnd.tv_usec-timeStart.tv_usec;
 
+#ifdef QUEUE_STATS
+    if(totalNumberOfFlushs == 0){
+        dequesPerFlush = 0.0;
+    }else{
+        dequesPerFlush = ((double)totalNumberOfDeques)/((double)totalNumberOfFlushs);
+    }
+#endif    
+
     double timePerOp = ((double)benchmarRealTime)/((double)totalNumberOfOperations);
+
     return timePerOp;
 }
 
@@ -880,8 +925,13 @@ void run_scaling_benchmark(int numOfThreads,
                                                            benchmarkTimeSeconds,
                                                            iterationsSpentCriticalWorkParam,
                                                            iterationsSpentInNonCriticalWorkParam);
+#ifdef QUEUE_STATS
+    printf("%d %f %f\n", numOfThreads, time, dequesPerFlush);
+    fprintf(stderr, "|| %f microseconds/operation, %f deques/flush (%d threads)\n", time, dequesPerFlush, numOfThreads);
+#else
     printf("%d %f\n", numOfThreads, time);
     fprintf(stderr, "|| %f microseconds/operation (%d threads)\n", time, numOfThreads);
+#endif
 
 }
 

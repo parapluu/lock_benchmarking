@@ -317,20 +317,14 @@ void drmvqueue_flush(DRMWQueue * queue){
                 load_acq(e.data, queue->elements[currentElementIndex].data);
                 load_acq(e.responseLocation, queue->elements[currentElementIndex].responseLocation);
             }
-
-
-#ifdef STACK_OPT
-            if(e.request == &push_cs){
-                push_cs(e.data, NULL);
-            }else{
-                pop_cs(0, e.responseLocation);
-            }
-#else
             e.request(e.data, e.responseLocation);
-#endif
             store_rel(queue->elements[currentElementIndex].request, NULL);
             currentElementIndex = currentElementIndex + 1;
         }else if (closed){
+#ifdef QUEUE_STATS
+            helpSeasonsPerformed.value++;
+            numberOfDeques.value = numberOfDeques.value + currentElementIndex;
+#endif
             //The queue is closed and there is no more elements that need to be read:
             return;
         }else{

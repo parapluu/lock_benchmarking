@@ -129,6 +129,11 @@ inline static RetVal applyOp(LockStruct *l, ThreadState *st_thread, ArgVal arg, 
     schedctl_stop(st_thread->schedule_control);
 #endif
 
+#ifdef QUEUE_STATS
+    helpSeasonsPerformed.value++;
+    numberOfDeques.value = numberOfDeques.value + counter;
+#endif
+
     return cur->arg_ret;
 }
 

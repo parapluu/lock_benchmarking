@@ -286,11 +286,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
         return false;
     }
 }
-//#define QUEUE_STATS
-#ifdef QUEUE_STATS
-__thread int flush_dequeus = 0;
-__thread int flushs = 0;
-#endif
+
 
 inline
 void drmvqueue_flush(DRMWQueue * queue){
@@ -321,6 +317,11 @@ void drmvqueue_flush(DRMWQueue * queue){
             store_rel(queue->elements[currentElementIndex].request, NULL);
             currentElementIndex = currentElementIndex + 1;
         }else if (closed){
+#ifdef QUEUE_STATS
+        helpSeasonsPerformed.value++;
+        numberOfDeques.value = numberOfDeques.value + currentElementIndex;
+#endif
+
             //The queue is closed and there is no more elements that need to be read:
             return;
         }else{
@@ -338,22 +339,10 @@ void drmvqueue_flush(DRMWQueue * queue){
                 numOfElementsToRead = 
                     min(get_and_set_ulong(&queue->elementCount.value, MWQ_CAPACITY + 1), 
                         MWQ_CAPACITY);
-#ifdef QUEUE_STATS
-		in_queue = in_queue + numOfElementsToRead;
-		flushs++;
-		if(flushs % 100 == 0)
-		  printf("%d %d ratio: %f\n", in_queue, flushs, ((float)in_queue) / flushs);
-#endif
 		closed = true;
             }else if(newNumOfElementsToRead < MWQ_CAPACITY){
                 numOfElementsToRead = newNumOfElementsToRead;
             }else{
-#ifdef QUEUE_STATS
-		in_queue = in_queue + numOfElementsToRead;
-		flushs++;
-		if(flushs % 100 == 0)
-		  printf("%d %d ratio: %f\n", in_queue, flushs, ((float)in_queue) / flushs);
-#endif
                 closed = true;
                 numOfElementsToRead = MWQ_CAPACITY;
             }

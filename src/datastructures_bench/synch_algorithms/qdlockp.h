@@ -299,7 +299,6 @@ __thread int flushs = 0;
 
 inline
 void drmvqueue_flush(DRMWQueue * queue){
-    int closed = false;
     int index = 0;
     int todo = 0;
     int done = todo;
@@ -327,6 +326,10 @@ void drmvqueue_flush(DRMWQueue * queue){
             store_rel(queue->elements[index].request, NULL);
         }
     }
+#ifdef QUEUE_STATS
+    helpSeasonsPerformed.value++;
+    numberOfDeques.value = numberOfDeques.value + todo;
+#endif
 }
 
 #elif defined (TACAS_FLUSH)

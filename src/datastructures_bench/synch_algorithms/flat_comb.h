@@ -273,6 +273,9 @@ SlotInfo* get_new_slot(FlatComb * flatcomb, SlotInfo * _tls_slot_info) {
 /* } */
 
 inline void flat_combining(FlatComb * flatcomb) {
+#ifdef QUEUE_STATS
+    helpSeasonsPerformed.value++;
+#endif
     for (int iTry=0;iTry<_NUM_REP; ++iTry) {
         //Memory::read_barrier();
         int num_changes=0;
@@ -295,6 +298,9 @@ inline void flat_combining(FlatComb * flatcomb) {
 
             load_acq(curr_slot, curr_slot->_next);
         }//while on slots
+#ifdef QUEUE_STATS
+        numberOfDeques.value = numberOfDeques.value + num_changes;
+#endif
         if(num_changes < _REP_THRESHOLD)
             break;
         //Memory::write_barrier();

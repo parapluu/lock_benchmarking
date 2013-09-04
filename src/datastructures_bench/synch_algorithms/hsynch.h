@@ -121,6 +121,11 @@ inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgV
     schedctl_stop(st_thread->schedule_control);
 #endif
 
+#ifdef QUEUE_STATS
+    helpSeasonsPerformed.value++;
+    numberOfDeques.value = numberOfDeques.value + counter;
+#endif
+
     return cur->arg_ret;
 }
 
