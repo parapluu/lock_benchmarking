@@ -342,22 +342,10 @@ void drmvqueue_flush(DRMWQueue * queue){
                 numOfElementsToRead = 
                     min(get_and_set_ulong(&queue->elementCount.value, MWQ_CAPACITY + 1), 
                         MWQ_CAPACITY);
-#ifdef QUEUE_STATS
-		in_queue = in_queue + numOfElementsToRead;
-		flushs++;
-		if(flushs % 100 == 0)
-		  printf("%d %d ratio: %f\n", in_queue, flushs, ((float)in_queue) / flushs);
-#endif
 		closed = true;
             }else if(newNumOfElementsToRead < MWQ_CAPACITY){
                 numOfElementsToRead = newNumOfElementsToRead;
             }else{
-#ifdef QUEUE_STATS
-		in_queue = in_queue + numOfElementsToRead;
-		flushs++;
-		if(flushs % 100 == 0)
-		  printf("%d %d ratio: %f\n", in_queue, flushs, ((float)in_queue) / flushs);
-#endif
                 closed = true;
                 numOfElementsToRead = MWQ_CAPACITY;
             }
