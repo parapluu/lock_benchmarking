@@ -128,7 +128,7 @@ __thread unsigned short * myXsubi;
 #ifdef USE_QDLOCK
 
 //#define WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT 1
-#define ACTIVATE_NO_CONTENTION_OPT
+//#define ACTIVATE_NO_CONTENTION_OPT
 //#define CAS_FETCH_AND_ADD
 
 #include "datastructures_bench/synch_algorithms/qdlock.h"
@@ -158,7 +158,7 @@ void lock_thread_init(){}
 #elif defined (USE_HQDLOCK)
 
 //#define WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT 1
-#define ACTIVATE_NO_CONTENTION_OPT
+//#define ACTIVATE_NO_CONTENTION_OPT
 //#define CAS_FETCH_AND_ADD
 
 #include "datastructures_bench/synch_algorithms/hqdlock.h"

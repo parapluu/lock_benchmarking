@@ -220,9 +220,9 @@ void drmvqueue_reset_fully_read(DRMWQueue *  queue);
 
 
 inline 
-int CAS_fetch_and_add(int * valueAddress, int incrementWith){
-    int oldValCAS;
-    int oldVal = ACCESS_ONCE(*valueAddress);
+int CAS_fetch_and_add(unsigned long * valueAddress, int incrementWith){
+    unsigned long oldValCAS;
+    unsigned long oldVal = ACCESS_ONCE(*valueAddress);
     while(true){
         oldValCAS = __sync_val_compare_and_swap(valueAddress, oldVal, oldVal + incrementWith);
         if(oldVal == oldValCAS){
@@ -469,7 +469,9 @@ void hqdlock_write_with_response(HQDLock *hqdlock,
                     clhUnlock(&hqdlock->lock, 0 /*NOT USED*/);
 		    tataslock_write_read_unlock(&lock->lock);
 		    return;
+#ifdef ACTIVATE_NO_CONTENTION_OPT
                 }
+#endif
             }
         }else{
             while(tataslock_is_locked(&lock->lock)){

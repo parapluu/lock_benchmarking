@@ -384,34 +384,41 @@ locked_data_stuctures = [
      'data_structure_alias' : 'micro_bench'}]
 
 benchmarked_locks = [
-    {'lock_define': 'USE_QDLOCK',
+    {'lock_defines': ['USE_QDLOCK'],
      'lock_alias' : 'qdlock'},
-    {'lock_define': 'USE_HQDLOCK',
+    {'lock_defines': ['USE_HQDLOCK'],
      'lock_alias' : 'hqdlock'},
-    {'lock_define': 'USE_CCSYNCH',
+    {'lock_defines': ['USE_QDLOCK', 'CAS_FETCH_AND_ADD'],
+     'lock_alias' : 'casqdlock'},
+    {'lock_defines': ['USE_HQDLOCK', 'CAS_FETCH_AND_ADD'],
+     'lock_alias' : 'cashqdlock'},
+    {'lock_defines': ['USE_QDLOCK', 'ACTIVATE_NO_CONTENTION_OPT'],
+     'lock_alias' : 'coptqdlock'},
+    {'lock_defines': ['USE_HQDLOCK', 'ACTIVATE_NO_CONTENTION_OPT'],
+     'lock_alias' : 'copthqdlock'},
+    {'lock_defines': ['USE_CCSYNCH'],
      'lock_alias' : 'ccsynch'},
-    {'lock_define': 'USE_HSYNCH',
+    {'lock_defines': ['USE_HSYNCH'],
      'lock_alias' : 'hsynch'},
-    {'lock_define': 'USE_FLATCOMB',
+    {'lock_defines': ['USE_FLATCOMB'],
      'lock_alias' : 'flatcomb'},
-    {'lock_define': 'USE_CLH',
+    {'lock_defines': ['USE_CLH'],
      'lock_alias' : 'clh'},
-    {'lock_define': 'USE_QDLOCKP',
+    {'lock_defines': ['USE_QDLOCKP'],
      'lock_alias' : 'qdlockp'},
-    {'lock_define': 'USE_COHORTLOCK',
+    {'lock_defines': ['USE_COHORTLOCK'],
      'lock_alias' : 'cohortlock'}] 
 
 for locked_data_stucture in locked_data_stuctures:
     for benchmarked_lock in benchmarked_locks:
         data_structure_define = locked_data_stucture['data_structure_define']
         data_structure_alias = locked_data_stucture['data_structure_alias']
-        lock_define = benchmarked_lock['lock_define']
+        lock_defines = benchmarked_lock['lock_defines']
         lock_alias = benchmarked_lock['lock_alias']
         object = env.Object(
             target = (data_structure_alias + '_' + lock_alias + '.o'),
             source = ['src/datastructures_bench/datastructures_bench.c'],
-            CPPDEFINES = [lock_define, 
-                          data_structure_define] + numa_structure_defines())
+            CPPDEFINES = [data_structure_define] + lock_defines + numa_structure_defines())
         env.Program(
             target = (data_structure_alias + '_' + lock_alias),
             source = [object])
