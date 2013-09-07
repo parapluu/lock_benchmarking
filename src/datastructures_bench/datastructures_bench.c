@@ -312,6 +312,18 @@ void enqueue_cs(int enqueueValue, int * notUsed){
       insert(priority_queue.value, enqueueValue);    
 }
 
+void enqueue_cs_write_back(int enqueueValue, int * resultLocation){
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+#ifdef DEBUG_PRINT_IN_CS
+    printf("ENQ CS %d\n", enqueueValue);
+#endif
+   priority_queue.value = 
+      insert(priority_queue.value, enqueueValue);
+   *resultLocation = -1;
+}
+
 void dequeue_cs(int notUsed, int * resultLocation){
 #ifdef SANITY_CHECK
     dequeues_executed.value++;
@@ -331,10 +343,18 @@ void dequeue_cs(int notUsed, int * resultLocation){
 }
 
 inline void enqueue(int value){
+#ifdef NO_PURE_DELEGATE
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
+    adxlock_write_with_response_block(&lock, &enqueue_cs_write_back, value); 
+#else
+    hqdlock_write_with_response_block(&lock, &enqueue_cs_write_back, value);
+#endif
+#else
 #if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     adxlock_delegate(&lock, &enqueue_cs, value); 
 #else
     hqdlock_delegate(&lock, &enqueue_cs, value);
+#endif
 #endif
 }
 inline int dequeue(){
