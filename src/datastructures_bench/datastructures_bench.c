@@ -255,6 +255,20 @@ void lock_thread_init(){
     clhThreadLocalInit();
 }
 
+#elif defined (USE_COHORTLOCK)
+#define ARRAY_SIZE 64
+#include "datastructures_bench/synch_algorithms/cohortlock.h"
+
+CohortLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    cohortlock_initialize(&lock, NULL);
+}
+
+void lock_thread_init(){
+    cohortlock_register_this_thread();
+}
+
 #endif
 //<<<<<<<<<<<<<<<<<<<<<<<
 // END Lock depended code
@@ -471,6 +485,43 @@ inline int dequeue(){
     return result;
 }
 
+#elif defined (USE_COHORTLOCK)
+
+inline void enqueue(int value){
+    cohortlock_write_read_lock(&lock);
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+#ifdef DEBUG_PRINT_IN_CS
+    printf("ENQ CS %d\n", enqueueValue);
+#endif
+    priority_queue.value = 
+        insert(priority_queue.value, value);
+    cohortlock_write_read_unlock(&lock);
+}
+inline int dequeue(){
+    int result;
+    cohortlock_write_read_lock(&lock);
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    if(priority_queue.value != NULL){
+        result = top(priority_queue.value);
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", result);
+#endif
+        priority_queue.value = pop(priority_queue.value);
+    }else{
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
+        result = -1;
+    }
+    cohortlock_write_read_unlock(&lock);
+    return result;
+}
+
+
 #endif // lock spesific
 
 #endif //USE Pairing heap
@@ -631,6 +682,26 @@ inline int dequeue(){
 #endif
     cs_work();
     clhUnlock(&lock, 0/*Not used*/);
+    return 1;
+}
+
+#elif defined (USE_COHORTLOCK)
+
+inline void enqueue(int value){
+    cohortlock_write_read_lock(&lock);
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+    cs_work();
+    cohortlock_write_read_unlock(&lock);
+}
+inline int dequeue(){
+    cohortlock_write_read_lock(&lock);
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    cs_work();
+    cohortlock_write_read_unlock(&lock);
     return 1;
 }
 

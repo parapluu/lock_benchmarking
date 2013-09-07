@@ -397,7 +397,9 @@ benchmarked_locks = [
     {'lock_define': 'USE_CLH',
      'lock_alias' : 'clh'},
     {'lock_define': 'USE_QDLOCKP',
-     'lock_alias' : 'qdlockp'}] 
+     'lock_alias' : 'qdlockp'},
+    {'lock_define': 'USE_COHORTLOCK',
+     'lock_alias' : 'cohortlock'}] 
 
 for locked_data_stucture in locked_data_stuctures:
     for benchmarked_lock in benchmarked_locks:
