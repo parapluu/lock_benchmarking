@@ -298,7 +298,7 @@ void aticketlock_read_unlock(ATicketLock *lock) {
 #include "ticket_lock.h"
 #include "aticket_lock.h"
 
-#define MAXIMUM_NUMBER_OF_HAND_OVERS 1024
+#define MAXIMUM_NUMBER_OF_HAND_OVERS MAX_NUM_OF_HELPED_OPS
 
 typedef struct NodeLocalLockDataImpl {
     char pad1[64];
