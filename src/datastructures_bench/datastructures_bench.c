@@ -19,7 +19,7 @@
 //#define DEBUG_PRINT_OUTSIDE_CS
 //#define SANITY_CHECK
 //#define QUEUE_STATS
-#define MAX_NUM_OF_HELPED_OPS 1024
+#define MAX_NUM_OF_HELPED_OPS 4096
 #ifdef QUEUE_STATS
 __thread CacheLinePaddedULong helpSeasonsPerformed __attribute__((aligned(128))) = {.value = 0};
 __thread CacheLinePaddedULong numberOfDeques __attribute__((aligned(128))) = {.value = 0};
