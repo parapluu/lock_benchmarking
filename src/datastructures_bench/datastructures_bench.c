@@ -912,8 +912,11 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
 double dequesPerFlush;
 #endif
 
-
-double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam, 
+typedef struct {
+	long ops;
+	long time;
+} result;
+result benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
                                                 int numberOfThreads,
                                                 int benchmarkTimeSeconds,
                                                 int iterationsSpentCriticalWorkParam,
@@ -998,9 +1001,10 @@ double benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
     }
 #endif    
 
-    double timePerOp = ((double)benchmarRealTime)/((double)totalNumberOfOperations);
-
-    return timePerOp;
+    result r;
+    r.ops = totalNumberOfOperations;
+    r.time = benchmarRealTime;
+    return r;
 }
 
 
@@ -1011,17 +1015,17 @@ void run_scaling_benchmark(int numOfThreads,
                            int iterationsSpentInNonCriticalWorkParam){
             
     fprintf(stderr, "=> Benchmark %d threads\n", numOfThreads);
-    double time = benchmark_parallel_mixed_enqueue_dequeue(percentageDequeueParam, 
+    result r = benchmark_parallel_mixed_enqueue_dequeue(percentageDequeueParam,
                                                            numOfThreads,
                                                            benchmarkTimeSeconds,
                                                            iterationsSpentCriticalWorkParam,
                                                            iterationsSpentInNonCriticalWorkParam);
 #ifdef QUEUE_STATS
-    printf("%d %f %f\n", numOfThreads, time, dequesPerFlush);
-    fprintf(stderr, "|| %f microseconds/operation, %f deques/flush (%d threads)\n", time, dequesPerFlush, numOfThreads);
+    printf("%d %ld %ld %f\n", numOfThreads, r.time, r.ops, dequesPerFlush);
+    fprintf(stderr, "|| %ld microseconds, %ld operations, %f deques/flush (%d threads)\n", r.time, r.ops, dequesPerFlush, numOfThreads);
 #else
-    printf("%d %f\n", numOfThreads, time);
-    fprintf(stderr, "|| %f microseconds/operation (%d threads)\n", time, numOfThreads);
+    printf("%d %ld %ld\n", numOfThreads, r.time, r.ops);
+    fprintf(stderr, "|| %ld microseconds, %ld operations, (%d threads)\n", r.time, r.ops, numOfThreads);
 #endif
 
 }

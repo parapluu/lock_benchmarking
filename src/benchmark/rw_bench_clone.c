@@ -190,7 +190,11 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
 //================
 
 
-double benchmark_parallel_mixed_read_write(double percentageReadParam, 
+typedef struct {
+	long ops;
+	long time;
+} result;
+result benchmark_parallel_mixed_read_write(double percentageReadParam, 
                                            int numberOfThreads,
                                            int benchmarkTimeSeconds,
                                            int iterationsSpentInWriteCriticalSectionParam,
@@ -255,8 +259,10 @@ double benchmark_parallel_mixed_read_write(double percentageReadParam,
 
     long benchmarRealTime = (timeEnd.tv_sec-timeStart.tv_sec)*1000000 + timeEnd.tv_usec-timeStart.tv_usec;
 
-    double timePerOp = ((double)benchmarRealTime)/((double)totalNumberOfOperations);
-    return timePerOp;
+    result r;
+    r.ops = totalNumberOfOperations;
+    r.time = benchmarRealTime;
+    return r;
 }
 
 
@@ -268,14 +274,14 @@ void run_scaling_benchmark(int numOfThreads,
                            int iterationsSpentInNonCriticalSectionParam){
             
     fprintf(stderr, "=> Benchmark %d threads\n", numOfThreads);
-    double time = benchmark_parallel_mixed_read_write(percentageReadParam, 
+    result r = benchmark_parallel_mixed_read_write(percentageReadParam, 
                                                       numOfThreads,
                                                       benchmarkTimeSeconds,
                                                       iterationsSpentInWriteCriticalSectionParam,
                                                       iterationsSpentInReadCriticalSectionParam,
                                                       iterationsSpentInNonCriticalSectionParam);
-    printf("%d %f\n", numOfThreads, time);
-    fprintf(stderr, "|| %f microseconds/operation (%d threads)\n", time, numOfThreads);
+    printf("%d %ld %ld\n", numOfThreads, r.time, r.ops);
+    fprintf(stderr, "|| %ld microseconds, %ld operations (%d threads)\n", r.time, r.ops, numOfThreads);
 
 }
 

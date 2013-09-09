@@ -10,7 +10,7 @@ def read_dat_file(the_file):
         for line in lines:
             p = line.split()
             x.append(float(p[0]))
-            y.append(float(p[1]))
+            y.append(float(p[1])/float(p[2])
         return (x, y)
 
 def set_up_figure(title):
