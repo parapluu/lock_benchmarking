@@ -87,7 +87,7 @@ inline static RetVal applyOp(HSynchStruct *l, HSynchThreadState *st_thread, ArgV
         FullFence();
         FullFence();
 #else
-        ;
+        __sync_synchronize();
 #endif
     }
 #if defined(__sun) || defined(sun)

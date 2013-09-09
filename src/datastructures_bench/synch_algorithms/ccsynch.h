@@ -95,7 +95,7 @@ inline static RetVal applyOp(LockStruct *l, ThreadState *st_thread, ArgVal arg, 
         FullFence();
         FullFence();
 #else
-        ;
+        __sync_synchronize();
 #endif
     }
     p = cur;                                // I am not been helped
