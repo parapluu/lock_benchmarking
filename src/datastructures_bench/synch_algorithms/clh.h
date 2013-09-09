@@ -12,11 +12,11 @@
 typedef pthread_mutex_t CLHLockStruct;
 
 
-inline static void clhLock(LockStruct *l, int pid) {
+inline void clhLock(LockStruct *l, int pid) {
     pthread_mutex_lock(l);
 }
 
-inline static void clhUnlock(LockStruct *l, int pid) {
+inline void clhUnlock(LockStruct *l, int pid) {
     pthread_mutex_unlock(l);
 }
 
@@ -52,9 +52,9 @@ typedef struct CLHThreadLocalData {
 __thread CLHThreadLocalData threadLocalData __attribute__((aligned(64)));
 
 
-inline static void clhLock(CLHLockStruct *l, int pid) {
+inline void clhLock(CLHLockStruct *l, int pid) {
     threadLocalData.MyNode->locked = true;
-    threadLocalData.MyPred = (CLHLockNode *)SWAP(&l->Tail, (void *)threadLocalData.MyNode);
+    threadLocalData.MyPred = (CLHLockNode *)__SWAP(&l->Tail, (void *)threadLocalData.MyNode);
     while (threadLocalData.MyPred->locked == true) {
 #if N_THREADS > USE_CPUS
         sched_yield();
@@ -64,7 +64,7 @@ inline static void clhLock(CLHLockStruct *l, int pid) {
     }
 }
 
-inline static void clhUnlock(CLHLockStruct *l, int pid) {
+inline void clhUnlock(CLHLockStruct *l, int pid) {
     threadLocalData.MyNode->locked = false;
     threadLocalData.MyNode = threadLocalData.MyPred;
 #ifdef sparc

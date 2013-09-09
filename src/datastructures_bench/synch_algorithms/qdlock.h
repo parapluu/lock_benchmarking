@@ -224,7 +224,7 @@ void drmvqueue_reset_fully_read(DRMWQueue *  queue);
 
 
 inline 
-int CAS_fetch_and_add(int * valueAddress, int incrementWith){
+int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith){
     int oldValCAS;
     int oldVal = ACCESS_ONCE(*valueAddress);
     while(true){
