@@ -315,8 +315,12 @@ if not use_llvm:
 #Located in src/benchmark/
 benchmarks_scripts = ['compare_benchmarks.py',
                       'benchmark_lock.py',
+                      'perf_magic',
                       'benchmark_lock_XNonCW.py',
                       'benchmark_lockXOpDist.py',
+                      'cache_benchmark_lock.py',
+                      'cache_benchmark_lock_XNonCW.py',
+                      'cache_benchmark_lockXOpDist.py',
                       'run_benchmarks_on_intel_i7.py',
                       'run_benchmarks_on_sandy.py',
                       'run_benchmarks_on_amd_fx_6100.py']

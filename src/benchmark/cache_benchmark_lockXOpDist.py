@@ -82,16 +82,18 @@ for benchmark_id in [benchmark_name + "_" + lock_id
                 print "\n\n\033[32m -- STARTING BENCHMARKS FOR " + output_file_str + "! -- \033[m\n\n"
                 for pr in percentages_reads:
                     [tc,rts,iw,ir,ncsw] = settings
-                    command = [bin_dir_path + '/' + benchmark_id,tc,pr,rts,iw,ir,ncsw]
+                    realcmd = [bin_dir_path + '/' + benchmark_id,tc,pr,rts,iw,ir,ncsw]
+		    perfcmd = ['perf', 'stat','-B', '-e', 'r01d1:u,r02d1:u,r04d1:u,r81d0:u']
+		    command = perfcmd + realcmd
                     print command
                     if pinning=='no':
-                        outString = subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0]
-			outfile.write(str(pr) + " " + ' '.join(outString.split(" ")[1:]))
+                        (outString, outErr) = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
                     else:
                         max_node_id = (int(tc)-1) / num_of_cpus_per_node
                         nomactrl = ['numactl', '--cpunodebind=' + ",".join([str(x) for x in range(0,max_node_id+1)])]
-                        outString = subprocess.Popen(nomactrl + command, stdout=subprocess.PIPE).communicate()[0]
-			outfile.write(str(pr) + " " + ' '.join(outString.split(" ")[1:]))
+                        (outString, outErr) = subprocess.Popen(nomactrl + command, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+                    cachedata = subprocess.Popen(bin_dir_path + '/' + 'perf_magic', stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate(outErr)[0]
+                    outfile.write(str(pr) + " " + ' '.join(outString.split(" ")[1:]).rstrip('\n') + cachedata + '\n')
                 print "\n\n\033[32m -- BENCHMARKS FOR " + output_file_str + " COMPLETED! -- \033[m\n\n"
 
 

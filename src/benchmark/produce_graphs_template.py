@@ -10,7 +10,7 @@ def read_dat_file(the_file):
         for line in lines:
             p = line.split()
             x.append(float(p[0]))
-            y.append(float(p[1])/float(p[2])
+            y.append(float(p[1])/float(p[2]))
         return (x, y)
 
 def set_up_figure(title):
@@ -29,8 +29,9 @@ def plot_file(the_file, title):
 def complete_figure(save_file_name):
     plt.axis(xmin=0)
     plt.axis(ymin=0)
+    plt.tight_layout()
     plt.legend(loc='best')
-    plt.savefig(save_file_name + '.pdf', bbox_inches=0)
+    plt.savefig(save_file_name + '.pdf', bbox_inches='tight')
     print save_file_name + '.pdf'
 
 
