@@ -414,29 +414,13 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
 	        if(counter > 0){
 #endif
                     drmvqueue_reset_fully_read(&lock->writeQueue);
-#ifdef STACK_OPT
-            if(e.request == &push_cs){
-                push_cs(e.data, NULL);
-            }else{
-                pop_cs(0, e.responseLocation);
-            }
-#else
-	    delgateFun(data, responseLocation);
-#endif
+                    delgateFun(data, responseLocation);
                     drmvqueue_flush(&lock->writeQueue);
                     tataslock_write_read_unlock(&lock->lock);
                     return;
 #ifdef ACTIVATE_NO_CONTENTION_OPT
 	        }else{
-#ifdef STACK_OPT
-            if(e.request == &push_cs){
-                push_cs(e.data, NULL);
-            }else{
-                pop_cs(0, e.responseLocation);
-            }
-#else
-	    delgateFun(data, responseLocation);
-#endif
+                    delgateFun(data, responseLocation);
 		    tataslock_write_read_unlock(&lock->lock);
 		    return;
                 }

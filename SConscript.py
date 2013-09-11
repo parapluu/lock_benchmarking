@@ -253,7 +253,18 @@ lock_infos = OrderedDict([
                       'lock_deps'   : ['mcs'],
                       'other_deps'  : [object_thread_id,
                                        object_dr_multi_writers_queue],
-                      'uses_nzi'     : False})])
+                      'uses_nzi'     : False}),
+        ('rhqdlock',   {'source'      : 'rhqd_lock',
+                        'defines'     : ['LOCK_TYPE_TATASLock',
+                                         'LOCK_TYPE_WPRW_TATASLock',
+                                         rg_define] + numa_structure_defines(),
+                        'exe_defines' : ['LOCK_TYPE_RHQDLock',
+                                         'LOCK_TYPE_WPRW_TATASLock',
+                                         rg_define] + numa_structure_defines(),
+                        'lock_deps'   : ['mcs', 'tatas'],
+                        'other_deps'  : [object_thread_id,
+                                         object_dr_multi_writers_queue],
+                        'uses_nzi'     : True}),])
 
 cpp_lock_infos = [('cpprdx',     {'source'      : 'cpprdx',
                                   'defines'     : [],

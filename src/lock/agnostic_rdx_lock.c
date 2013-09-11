@@ -17,7 +17,7 @@ AgnosticRDXLock * ardxlock_create(void (*writer)(void *, void **)){
 
 void ardxlock_initialize(AgnosticRDXLock * lock, void (*writer)(void *, void **)){
     lock->writer = writer;
-    lock->writeBarrier.value = false;
+    lock->writeBarrier.value = 0;
     LOCK_INITIALIZE(&lock->lock, writer);
     NZI_INITIALIZE(&lock->nonZeroIndicator);
     drmvqueue_initialize(&lock->writeQueue);
@@ -42,27 +42,43 @@ void waitUntilWriteBarrierOff(AgnosticRDXLock *lock) {
     }
 }
 
-void ardxlock_write_with_response(AgnosticRDXLock *lock, void (*delgateFun)(void *, void **), void * data, void ** responseLocation) {
+void ardxlock_write_with_response(AgnosticRDXLock *lock,
+                                  void (*delgateFun)(void *, void **),
+                                  void * data,
+                                  void ** responseLocation) {
     waitUntilWriteBarrierOff(lock);
+    int counter = 0;
     DelegateRequestEntry e;
     e.request = delgateFun;
     e.data = data;
     e.responseLocation = responseLocation;
-    while(!drmvqueue_offer(&lock->writeQueue, e)){
+    do{
         if(!LOCK_IS_LOCKED(&lock->lock)){
             if(LOCK_TRY_WRITE_READ_LOCK(&lock->lock)){
-                drmvqueue_reset_fully_read(&lock->writeQueue);
-                NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
-                delgateFun(data, responseLocation);
-                drmvqueue_flush(&lock->writeQueue);
-                LOCK_WRITE_READ_UNLOCK(&lock->lock);
-                return;
+                    drmvqueue_reset_fully_read(&lock->writeQueue);
+                    NZI_WAIT_UNIL_EMPTY(&lock->nonZeroIndicator);
+                    delgateFun(data, responseLocation);
+                    drmvqueue_flush(&lock->writeQueue);
+                    LOCK_WRITE_READ_UNLOCK(&lock->lock);
+                    return;
+            }
+        }else{
+            while(LOCK_IS_LOCKED(&lock->lock)){
+                if(drmvqueue_offer(&lock->writeQueue, e)){
+                    return;
+                }else{
+                    __sync_synchronize();
+                    __sync_synchronize();
+                }
             }
         }
-        //__sync_synchronize(); or a pause instruction
-        //is probably necessary here to make it perform on
-        //sandy
-    }
+        if((counter & 7) == 0){
+#ifdef USE_YIELD
+            sched_yield();
+#endif
+        }
+        counter = counter + 1;
+    }while(true);
 }
 
 void ardxlock_delegate(AgnosticRDXLock *lock, void (*delgateFun)(void *, void**), void * data) {

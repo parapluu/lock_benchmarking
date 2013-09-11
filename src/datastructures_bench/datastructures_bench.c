@@ -799,7 +799,7 @@ void pin(int thread_id){
 #endif
 
     int node = next_numa_node % NUMBER_OF_NUMA_NODES;
-    numa_node.value = node;    
+    numa_node.value = node;   
     int core_in_node = core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE;
 #ifdef CORE_FIRST_POLICY_SANDY
     if(((core_in_node+1) % 2) == 0){

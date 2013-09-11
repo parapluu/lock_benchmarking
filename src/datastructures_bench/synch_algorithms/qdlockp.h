@@ -299,19 +299,19 @@ __thread int flushs = 0;
 
 inline
 void drmvqueue_flush(DRMWQueue * queue){
-    int index = 0;
     int todo = 0;
-    int done = todo;
-    while (done < MWQ_CAPACITY) {
-        done = todo;
-        todo = __sync_val_compare_and_swap(&queue->elementCount.value, done, MWQ_CAPACITY);
+    bool open = true;
+    while (open) {
+        int done = todo;
+        load_acq(todo, queue->elementCount.value);
         if (todo == done) { /* close queue */
-            done = MWQ_CAPACITY;
+            todo =get_and_set_ulong(&queue->elementCount.value, MWQ_CAPACITY);
+            open = false;
         }else if(todo >= MWQ_CAPACITY){
             todo = MWQ_CAPACITY;
-            done = MWQ_CAPACITY;
+            open = false;
         }
-        for ( ; index < todo ; index++) {
+        for (int index = done ; index < todo ; index++) {
             DelegateRequestEntry e;
             load_acq(e.request, queue->elements[index].request);
             load_acq(e.data, queue->elements[index].data);

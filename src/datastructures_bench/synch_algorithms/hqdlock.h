@@ -419,7 +419,7 @@ HQDLock * hqdlock_create(void (*writer)(int, int *)){
 
 void hqdlock_initialize(HQDLock * lock, void (*defaultWriter)(int, int *)){
     for(int n = 0; n < NUMBER_OF_NUMA_NODES; n++){
-adxlock_initialize(&lock->qdlocks[n], NULL);
+        adxlock_initialize(&lock->qdlocks[n], NULL);
     }
     clhLockInitExisting(&lock->lock);
 }
