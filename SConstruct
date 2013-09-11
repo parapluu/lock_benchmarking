@@ -6,6 +6,11 @@ AddOption('--cpp_locks',
           dest='cpp_locks',
           default=False)
 
+AddOption('--llvm',
+          action='store_true',
+          dest='use_llvm',
+          default=False)
+
 AddOption('--use_cas_fetch_and_add',
           action='store_true',
           dest='use_cas_fetch_and_add',

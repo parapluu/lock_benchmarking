@@ -6,6 +6,7 @@ sys.path.append('../src/lock')
 sys.path.append('src/lock')
 from extract_numa_structure import numa_structure_defines
 
+import os
 
 ############
 #Definitions
@@ -14,6 +15,7 @@ from extract_numa_structure import numa_structure_defines
 Import('mode')
 
 use_cpp_locks = GetOption('cpp_locks')
+use_llvm = GetOption('use_llvm')
 
 use_cas_fetch_and_add = GetOption('use_cas_fetch_and_add')
 
@@ -32,6 +34,8 @@ std_link_flags = ['-pthread']
 
 debug_flags = ['-O1',
                '-g']
+if use_llvm:
+	debug_flags.append('-fsanitize=address-full')
 
 debug_flags0 = ['-O0',
                '-g']
@@ -53,10 +57,18 @@ else:
     std_cxx_flags = std_cxx_flags + optimization_flags
     std_link_flags = std_link_flags + optimization_flags
 
+cc = 'gcc'
+cxx = 'g++'
+if use_llvm:
+	cc = 'clang'
+	cxx = 'clang++'
+
 env = Environment(
+    ENV = os.environ,
     CFLAGS = ' '.join(std_cc_flags),
     CXXFLAGS = ' '.join(std_cxx_flags),
-    CXX = 'clang++',
+    CC = cc,
+    CXX = cxx,
     LINKFLAGS = ' '.join(std_link_flags),
     CPPPATH = ['.',
                'src/',
@@ -76,7 +88,6 @@ hardware_threads_define = ('NUMBER_OF_HARDWARE_THREADS',num_of_cores_str)
 #For partitioned ticket lock
 array_size_define = ('ARRAY_SIZE',num_of_cores_str)
 
-object_multi_writers_queue = env.Object("src/datastructures/multi_writers_queue.c")
 
 object_opti_multi_writers_queue = env.Object("src/datastructures/opti_multi_writers_queue.c")
 
@@ -100,24 +111,7 @@ nzi_infos = OrderedDict([
                                           ] + numa_structure_defines(),
                         'deps'        : [object_numa_node_info,
                                          object_numa_ingress_egress_nzi]})])
-
 lock_infos = OrderedDict([
-        ('sdw',        {'source'      : 'simple_delayed_writers_lock',
-                        'defines'     : [rg_define],
-                        'exe_defines' : ['LOCK_TYPE_SimpleDelayedWritesLock', 
-                                         rg_define],
-                        'lock_deps'   : [],
-                        'other_deps'  : [object_multi_writers_queue,
-                                         object_thread_id],
-                        'uses_nzi'     : True}),
-        ('aer',        {'source'      : 'all_equal_rdx_lock',
-                        'defines'     : [rg_define],
-                        'exe_defines' : ['LOCK_TYPE_AllEqualRDXLock',
-                                         rg_define],
-                        'lock_deps'   : [],
-                        'other_deps'  : [object_multi_writers_queue,
-                                         object_thread_id],
-                        'uses_nzi'    : True}),
         ('ttsa',        {'source'     : 'tts_rdx_lock',
                          'defines'    : [rg_define],
                          'exe_defines': ['LOCK_TYPE_TTSRDXLock',
@@ -270,8 +264,31 @@ cpp_lock_infos = [('cpprdx',     {'source'      : 'cpprdx',
 
 if use_cpp_locks:
     lock_infos.update(cpp_lock_infos)
+if not use_llvm:
+	object_multi_writers_queue = env.Object("src/datastructures/multi_writers_queue.c")
+	gcc_only_lock_infos = [
+		('sdw',        {'source'      : 'simple_delayed_writers_lock',
+				'defines'     : [rg_define],
+				'exe_defines' : ['LOCK_TYPE_SimpleDelayedWritesLock', 
+						 rg_define],
+				'lock_deps'   : [],
+				'other_deps'  : [object_multi_writers_queue,
+						 object_thread_id],
+				'uses_nzi'     : True}),
+		('aer',        {'source'      : 'all_equal_rdx_lock',
+				'defines'     : [rg_define],
+				'exe_defines' : ['LOCK_TYPE_AllEqualRDXLock',
+						 rg_define],
+				'lock_deps'   : [],
+				'other_deps'  : [object_multi_writers_queue,
+						 object_thread_id],
+				'uses_nzi'    : True})
+		]
+	lock_infos.update(gcc_only_lock_infos)
 
-lock_specific_object_defs = OrderedDict([
+lock_specific_object_defs = OrderedDict([])
+if not use_llvm:
+	gcc_specific_object_defs = [
         ('test',             {'source'      : 'src/tests/test_rdx_lock.c',
                               'defines'     : [hardware_threads_define]}),
         ('rw_bench_clone',   {'source'      : 'src/benchmark/rw_bench_clone.c',
@@ -279,7 +296,9 @@ lock_specific_object_defs = OrderedDict([
         #('rw_bench_memtrans',{'source'      : 'src/benchmark/rw_bench_clone.c',
         #                     'defines'     : ['RW_BENCH_MEM_TRANSFER']}),
         ('priority_queue_bench',   {'source'      : 'src/benchmark/priority_queue_bench.c',
-                                    'defines'     : ['PAIRING_HEAP']})])
+                                    'defines'     : ['PAIRING_HEAP']})]
+	lock_specific_object_defs.update(gcc_specific_object_defs)
+
 
 
 #Located in src/benchmark/
@@ -363,11 +382,11 @@ for lock_id in lock_infos:
         create_lock_specific_program(lock_id,
                                      lock_specific_object_def_id)
 
-
-env.Program(
-    target = 'test_multi_writers_queue',
-    source = ['src/tests/test_multi_writers_queue.c',
-              object_multi_writers_queue])
+if not use_llvm:
+	env.Program(
+	    target = 'test_multi_writers_queue',
+	    source = ['src/tests/test_multi_writers_queue.c',
+		      object_multi_writers_queue])
 
 env.Program(
     target = 'test_pairingheap',
@@ -377,11 +396,15 @@ env.Program(
 #Data structure benchmark
 #########################
 
-locked_data_stuctures = [
+locked_data_stuctures = []
+gcc_only_structures = [
     {'data_structure_define': 'USE_PAIRING_HEAP',
      'data_structure_alias' : 'pairing_heap_bench'},
     {'data_structure_define': 'USE_MICRO_BENCH',
      'data_structure_alias' : 'micro_bench'}]
+
+if not use_llvm:
+	locked_data_stuctures.extend(gcc_only_structures)
 
 benchmarked_locks = [
     {'lock_defines': ['USE_QDLOCK'],
@@ -435,13 +458,14 @@ for locked_data_stucture in locked_data_stuctures:
             target = (data_structure_alias + '_' + lock_alias),
             source = [object])
 
-fetch_and_add_bench_object = env.Object(
-    target = ('fetch_and_add_bench.o'),
-    source = ['src/datastructures_bench/datastructures_bench.c'],
-    CPPDEFINES = ['USE_SHARED_FETCH_AND_ADD'] + numa_structure_defines())
-env.Program(
-    target = ('fetch_and_add_bench'),
-    source = [fetch_and_add_bench_object])
+if not use_llvm:
+	fetch_and_add_bench_object = env.Object(
+	    target = ('fetch_and_add_bench.o'),
+	    source = ['src/datastructures_bench/datastructures_bench.c'],
+	    CPPDEFINES = ['USE_SHARED_FETCH_AND_ADD'] + numa_structure_defines())
+	env.Program(
+	    target = ('fetch_and_add_bench'),
+	    source = [fetch_and_add_bench_object])
 
 #############
 #Copy scripts
