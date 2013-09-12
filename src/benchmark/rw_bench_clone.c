@@ -20,8 +20,10 @@
 
 
 #ifdef PINNING
-//OBS TODO, this is just to make it compile when pinning is activated
 __thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
+//#define CORE_FIRST_POLICY_SANDY
+//#define SPREAD_PINNING_POLICY
+#define NODE_FIRST_POLICY
 #endif
 
 typedef struct SeedWrapperImpl{
