@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 
 def read_dat_file(the_file):
