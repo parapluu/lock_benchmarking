@@ -26,7 +26,14 @@ def set_up_figure(title):
 
 def plot_file(the_file, title):
     (x_list, y_list) = read_dat_file(the_file)
-    plt.plot(x_list, y_list, label=title)
+    mapped = [(a, [b for (comp_a, b) in zip(x_list, y_list) if a == comp_a]) for a in x_list]
+    mapped.sort()
+    x,y_vals = zip(*mapped)
+    y = map(lambda v : sum(v) / float(len(v)), y_vals)
+    emin = map(lambda (v, avg) : avg - min(v), zip(y_vals, y))
+    emax = map(lambda (v, avg) : max(v) - avg, zip(y_vals, y))
+    plt.errorbar(x, y, [emin, emax], label=title, linewidth=2, elinewidth=1, marker='o')
+    #plt.plot(x, y, label=title, linewidth=2)
 
 
 def complete_figure(save_file_name):
