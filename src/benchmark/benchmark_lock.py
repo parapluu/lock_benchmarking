@@ -64,7 +64,7 @@ iterations_ncs = parameters.pop(0).split(',')
 iterations=3
 for iteration in range(iterations):
 	print "\n\nSTARTING ITERATION " + str(iteration+1) + " / " + str(iterations) + "\n\n"
-	for benchmark_id in [benchmark_name + "_" + lock_id 
+	for (benchmark_id, lock_id) in [(benchmark_name + "_" + lock_id, lock_id)
 			     for benchmark_name in benchmark_names 
 			     for lock_id in lock_ids]:
 	    for settings in [[pr,rts,iw,ir,incs] 
@@ -75,7 +75,7 @@ for iteration in range(iterations):
 			     for incs in iterations_ncs]:
 		for pinning in pinning_settings:
 		    output_file_dir_str = ('bench_results/' + 
-					   benchmark_id + output_dir_base + '/')
+					   benchmark_id + '#' + output_dir_base + '#' + lock_id +  '/')
 		    if not os.path.exists(output_file_dir_str):
 			os.makedirs(output_file_dir_str)
 		    output_file_str = (output_file_dir_str +

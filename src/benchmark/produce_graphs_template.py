@@ -5,6 +5,11 @@ matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 
+try:
+	Format = FORMAT
+except NameError:
+	Format = 'pdf'
+
 def read_dat_file(the_file):
     with open(the_file, 'r') as f:
         lines = f.readlines()
@@ -41,7 +46,7 @@ def complete_figure(save_file_name):
     plt.axis(ymin=0)
     plt.tight_layout()
     plt.legend(loc='best')
-    plt.savefig(save_file_name + '.pdf', bbox_inches='tight')
-    print save_file_name + '.pdf'
+    plt.savefig(save_file_name + '.' + Format, bbox_inches='tight')
+    print save_file_name + '.' + Format
 
 
