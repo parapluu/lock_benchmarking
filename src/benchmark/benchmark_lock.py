@@ -20,6 +20,8 @@ parameters = sys.argv
 
 parameters.pop(0)
 
+iterations = int(parameters.pop(0))
+
 if len(parameters) < 10:
     print """Not enough parameters:
 
@@ -61,7 +63,6 @@ iterations_rcs = parameters.pop(0).split(',')
 
 iterations_ncs = parameters.pop(0).split(',')
 
-iterations=3
 for iteration in range(iterations):
 	print "\n\nSTARTING ITERATION " + str(iteration+1) + " / " + str(iterations) + "\n\n"
 	for (benchmark_id, lock_id) in [(benchmark_name + "_" + lock_id, lock_id)

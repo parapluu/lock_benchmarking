@@ -20,6 +20,8 @@ parameters = sys.argv
 
 parameters.pop(0)
 
+iterations = int(parameters.pop(0))
+
 if len(parameters) < 10:
     print """Not enough parameters:
 
@@ -62,36 +64,38 @@ iterations_rcs = parameters.pop(0).split(',')
 iterations_ncs = parameters.pop(0).split(',')
 
 
-for benchmark_id in [benchmark_name + "_" + lock_id 
-                     for benchmark_name in benchmark_names 
-                     for lock_id in lock_ids]:
-    for settings in [[tc,pr,rts,iw,ir] 
-                     for tc in thread_counts
-                     for pr in percentages_reads
-                     for rts in run_times_seconds
-                     for iw in iterations_wcs
-                     for ir in iterations_rcs]:
-        for pinning in pinning_settings:
-            output_file_dir_str = ('bench_results/' + 
-                                   benchmark_id + output_dir_base + '/')
-            if not os.path.exists(output_file_dir_str):
-                os.makedirs(output_file_dir_str)
-            output_file_str = (output_file_dir_str +
-                               'xncw_' + pinning + '_' + '_'.join(settings) + '.dat')
-            with open(output_file_str, "w") as outfile:
-                print "\n\n\033[32m -- STARTING BENCHMARKS FOR " + output_file_str + "! -- \033[m\n\n"
-                for non_cs_work in iterations_ncs:
-                    [tc,pr,rts,iw,ir] = settings
-                    command = [bin_dir_path + '/' + benchmark_id,tc,pr,rts,iw,ir,non_cs_work]
-                    print command
-                    if pinning=='no':
-                        outString = subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0]
-			outfile.write(str(non_cs_work) + " " + ' '.join(outString.split(" ")[1:]))
-                    else:
-                        max_node_id = (int(tc)-1) / num_of_cpus_per_node
-                        nomactrl = ['numactl', '--cpunodebind=' + ",".join([str(x) for x in range(0,max_node_id+1)])]
-                        outString = subprocess.Popen(nomactrl + command, stdout=subprocess.PIPE).communicate()[0]
-			outfile.write(str(non_cs_work) + " " + ' '.join(outString.split(" ")[1:]))
-                print "\n\n\033[32m -- BENCHMARKS FOR " + output_file_str + " COMPLETED! -- \033[m\n\n"
-
-
+for iteration in range(iterations):
+	print "\n\nSTARTING ITERATION " + str(iteration+1) + " / " + str(iterations) + "\n\n"
+	for (benchmark_id, lock_id) in [(benchmark_name + "_" + lock_id, lock_id)
+			     for benchmark_name in benchmark_names 
+			     for lock_id in lock_ids]:
+	    for settings in [[tc,pr,rts,iw,ir] 
+			     for tc in thread_counts
+			     for pr in percentages_reads
+			     for rts in run_times_seconds
+			     for iw in iterations_wcs
+			     for ir in iterations_rcs]:
+		for pinning in pinning_settings:
+		    output_file_dir_str = ('bench_results/' + 
+					   benchmark_id + '#' + output_dir_base + '#' + lock_id +  '/')
+		    if not os.path.exists(output_file_dir_str):
+			os.makedirs(output_file_dir_str)
+		    output_file_str = (output_file_dir_str +
+				       'xncw_' + pinning + '_' + '_'.join(settings) + '.dat')
+		    with open(output_file_str, "a") as outfile:
+			print "\n\n\033[32m -- STARTING BENCHMARKS FOR " + output_file_str + "! -- \033[m\n\n"
+			for non_cs_work in iterations_ncs:
+			    [tc,pr,rts,iw,ir] = settings
+			    command = [bin_dir_path + '/' + benchmark_id,tc,pr,rts,iw,ir,non_cs_work]
+			    print command
+			    if pinning=='no':
+				outString = subprocess.Popen(command, stdout=subprocess.PIPE).communicate()[0]
+				outfile.write(str(non_cs_work) + " " + ' '.join(outString.split(" ")[1:]))
+			    else:
+				max_node_id = (int(tc)-1) / num_of_cpus_per_node
+				nomactrl = ['numactl', '--cpunodebind=' + ",".join([str(x) for x in range(0,max_node_id+1)])]
+				outString = subprocess.Popen(nomactrl + command, stdout=subprocess.PIPE).communicate()[0]
+				outfile.write(str(non_cs_work) + " " + ' '.join(outString.split(" ")[1:]))
+			print "\n\n\033[32m -- BENCHMARKS FOR " + output_file_str + " COMPLETED! -- \033[m\n\n"
+	
+	print "\n\nITERATION " + str(iteration+1) + " / " + str(iterations) + " DONE!\n\n"

@@ -8,6 +8,8 @@ bin_dir_path = os.path.dirname(os.path.realpath(__file__))
 
 command = [
     os.path.join(bin_dir_path, 'benchmark_lock.py'),
+    #number of iterations
+    '5',
     #Output dir (standard menas a dir in bench_result based on the git
     #commit id and the date)
     'standard',
