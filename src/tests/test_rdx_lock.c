@@ -9,6 +9,9 @@
 
 CacheLinePaddedPointer test_write_var __attribute__((aligned(128)))  = {.value = NULL};
 
+
+__thread CacheLinePaddedInt numa_node;
+
 void test_writer(void * pointer_increment, void **writeBackLocation){
     void * inital_test_write_var = test_write_var.value;
     test_write_var.value = test_write_var.value + (long)pointer_increment;

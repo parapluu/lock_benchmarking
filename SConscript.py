@@ -16,6 +16,7 @@ Import('mode')
 
 use_cpp_locks = GetOption('cpp_locks')
 use_llvm = GetOption('use_llvm')
+use_pinning = GetOption('use_pinning')
 
 use_cas_fetch_and_add = GetOption('use_cas_fetch_and_add')
 
@@ -79,6 +80,11 @@ env = Environment(
                'src/benchmark/skiplist',
                'src/benchmark/pairingheap'])
 
+
+pinning_def = 'NO_PINNING'
+if use_pinning:
+        pinning_def = 'PINNING'
+
 num_of_cores_str=str(multiprocessing.cpu_count())
 
 rg_define = ('NUMBER_OF_READER_GROUPS',num_of_cores_str)
@@ -115,14 +121,14 @@ lock_infos = OrderedDict([
         ('ttsa',        {'source'     : 'tts_rdx_lock',
                          'defines'    : [rg_define],
                          'exe_defines': ['LOCK_TYPE_TTSRDXLock',
-                                         rg_define],
+                                         rg_define] + numa_structure_defines(),
                          'lock_deps'  : [],
                          'other_deps' : [object_opti_multi_writers_queue,
                                          object_thread_id],
                          'uses_nzi'   : True}),
         ('mcs',        {'source'      : 'mcs_lock',
                         'defines'     : [],
-                        'exe_defines' : ['LOCK_TYPE_MCSLock'],
+                        'exe_defines' : ['LOCK_TYPE_MCSLock']  + numa_structure_defines(),
                         'lock_deps'   : [],
                         'other_deps'  : [],
                         'uses_nzi'    : False}),
@@ -132,7 +138,7 @@ lock_infos = OrderedDict([
                                          rg_define],
                         'exe_defines' : ['LOCK_TYPE_WPRWLock',
                                          'LOCK_TYPE_WPRW_MCSLock',
-                                         rg_define],
+                                         rg_define]  + numa_structure_defines(),
                         'lock_deps'   : ['mcs'],
                         'other_deps'  : [object_thread_id],
                         'uses_nzi'     : True}),
@@ -142,14 +148,14 @@ lock_infos = OrderedDict([
                                          rg_define],
                         'exe_defines' : ['LOCK_TYPE_AgnosticRDXLock',
                                          'LOCK_TYPE_WPRW_MCSLock',
-                                         rg_define],
+                                         rg_define]  + numa_structure_defines(),
                         'lock_deps'   : ['mcs'],
                         'other_deps'  : [object_thread_id,
                                          object_dr_multi_writers_queue],
                         'uses_nzi'     : True}),
         ('tatas',      {'source'      : 'tatas_lock',
                         'defines'     : [],
-                        'exe_defines' : ['LOCK_TYPE_TATASLock'],
+                        'exe_defines' : ['LOCK_TYPE_TATASLock']  + numa_structure_defines(),
                         'lock_deps'   : [],
                         'other_deps'  : [],
                         'uses_nzi'     : False}),
@@ -159,28 +165,30 @@ lock_infos = OrderedDict([
                                          rg_define],
                         'exe_defines' : ['LOCK_TYPE_AgnosticRDXLock',
                                          'LOCK_TYPE_WPRW_TATASLock',
-                                         rg_define],
+                                         rg_define]  + numa_structure_defines(),
                         'lock_deps'   : ['tatas'],
                         'other_deps'  : [object_thread_id,
                                          object_dr_multi_writers_queue],
                         'uses_nzi'     : True}),
         ('ticket',     {'source'      : 'ticket_lock',
                         'defines'     : [],
-                        'exe_defines' : ['LOCK_TYPE_TicketLock'],
+                        'exe_defines' : ['LOCK_TYPE_TicketLock']  + numa_structure_defines(),
                         'lock_deps'   : [],
                         'other_deps'  : [],
                         'uses_nzi'     : False}),
         ('aticket',    {'source'      : 'aticket_lock',
                         'defines'     : [array_size_define],
                         'exe_defines' : ['LOCK_TYPE_ATicketLock',
-                                         array_size_define],
+                                         array_size_define] + numa_structure_defines(),
                         'lock_deps'   : [],
                         'other_deps'  : [],
                         'uses_nzi'     : False}),
         ('cohort',     {'source'      : 'cohort_lock',
-                        'defines'     : [array_size_define] + numa_structure_defines(),
+                        'defines'     : [array_size_define,
+                                         pinning_def] + numa_structure_defines(),
                         'exe_defines' : ['LOCK_TYPE_CohortLock', 
-                                         array_size_define] + numa_structure_defines(),
+                                         array_size_define,
+                                         pinning_def] + numa_structure_defines(),
                         'lock_deps'   : ['ticket','aticket'],
                         'other_deps'  : [object_numa_node_info],
                         'uses_nzi'     : False}),
@@ -188,11 +196,13 @@ lock_infos = OrderedDict([
                         'defines'     : ['LOCK_TYPE_CohortLock', 
                                          'LOCK_TYPE_WPRW_CohortLock', 
                                          array_size_define, 
-                                         rg_define] + numa_structure_defines(),
+                                         rg_define,
+                                         pinning_def] + numa_structure_defines(),
                         'exe_defines' : ['LOCK_TYPE_WPRWLock', 
                                          'LOCK_TYPE_WPRW_CohortLock', 
                                          array_size_define, 
-                                         rg_define]  + numa_structure_defines(),
+                                         rg_define,
+                                         pinning_def]  + numa_structure_defines(),
                         'lock_deps'   : ['cohort'],
                         'other_deps'  : [object_numa_node_info,
                                          object_thread_id],
@@ -201,7 +211,8 @@ lock_infos = OrderedDict([
                         'defines'     : ['LOCK_TYPE_CohortLock',
                                          'LOCK_TYPE_WPRW_CohortLock',
                                          array_size_define,
-                                         rg_define] + numa_structure_defines(),
+                                         rg_define,
+                                         pinning_def] + numa_structure_defines(),
                         'exe_defines' : ['LOCK_TYPE_AgnosticRDXLock',
                                          'LOCK_TYPE_WPRW_CohortLock',
                                          array_size_define,
@@ -214,7 +225,7 @@ lock_infos = OrderedDict([
         ('fcrdx',        {'source'      : 'flat_comb_rdx_lock',
                           'defines'     : [rg_define],
                           'exe_defines' : ['LOCK_TYPE_FlatCombRDXLock',
-                                           rg_define],
+                                           rg_define]  + numa_structure_defines(),
                           'lock_deps'   : [],
                           'other_deps'  : [object_thread_id],
                           'uses_nzi'     : True}),
@@ -222,7 +233,7 @@ lock_infos = OrderedDict([
                        'defines'     : ['LOCK_TYPE_TATASLock',
                                         'LOCK_TYPE_WPRW_TATASLock'],
                        'exe_defines' : ['LOCK_TYPE_AgnosticDXLock',
-                                        'LOCK_TYPE_WPRW_TATASLock'],
+                                        'LOCK_TYPE_WPRW_TATASLock']  + numa_structure_defines(),
                        'lock_deps'   : ['tatas'],
                        'other_deps'  : [object_thread_id,
                                         object_dr_multi_writers_queue],
@@ -231,7 +242,7 @@ lock_infos = OrderedDict([
                         'defines'     : ['LOCK_TYPE_TATASLock',
                                          'LOCK_TYPE_WPRW_TATASLock'],
                         'exe_defines' : ['LOCK_TYPE_AgnosticFDXLock',
-                                         'LOCK_TYPE_WPRW_TATASLock'],
+                                         'LOCK_TYPE_WPRW_TATASLock']  + numa_structure_defines(),
                         'lock_deps'   : ['tatas'],
                         'other_deps'  : [object_thread_id,
                                          object_dr_multi_writers_queue],
@@ -240,7 +251,7 @@ lock_infos = OrderedDict([
                      'defines'     : ['LOCK_TYPE_MCSLock',
                                       'LOCK_TYPE_WPRW_MCSLock'],
                      'exe_defines' : ['LOCK_TYPE_AgnosticDXLock',
-                                      'LOCK_TYPE_WPRW_MCSLock'],
+                                      'LOCK_TYPE_WPRW_MCSLock']  + numa_structure_defines(),
                      'lock_deps'   : ['mcs'],
                      'other_deps'  : [object_thread_id,
                                       object_dr_multi_writers_queue],
@@ -249,7 +260,7 @@ lock_infos = OrderedDict([
                       'defines'     : ['LOCK_TYPE_MCSLock',
                                        'LOCK_TYPE_WPRW_MCSLock'],
                       'exe_defines' : ['LOCK_TYPE_AgnosticFDXLock',
-                                       'LOCK_TYPE_WPRW_MCSLock'],
+                                       'LOCK_TYPE_WPRW_MCSLock']  + numa_structure_defines(),
                       'lock_deps'   : ['mcs'],
                       'other_deps'  : [object_thread_id,
                                        object_dr_multi_writers_queue],
@@ -257,7 +268,8 @@ lock_infos = OrderedDict([
         ('rhqdlock',   {'source'      : 'rhqd_lock',
                         'defines'     : ['LOCK_TYPE_TATASLock',
                                          'LOCK_TYPE_WPRW_TATASLock',
-                                         rg_define] + numa_structure_defines(),
+                                         rg_define,
+                                         pinning_def] + numa_structure_defines(),
                         'exe_defines' : ['LOCK_TYPE_RHQDLock',
                                          'LOCK_TYPE_WPRW_TATASLock',
                                          rg_define] + numa_structure_defines(),
@@ -281,7 +293,7 @@ if not use_llvm:
 		('sdw',        {'source'      : 'simple_delayed_writers_lock',
 				'defines'     : [rg_define],
 				'exe_defines' : ['LOCK_TYPE_SimpleDelayedWritesLock', 
-						 rg_define],
+						 rg_define] + numa_structure_defines(),
 				'lock_deps'   : [],
 				'other_deps'  : [object_multi_writers_queue,
 						 object_thread_id],
@@ -289,7 +301,7 @@ if not use_llvm:
 		('aer',        {'source'      : 'all_equal_rdx_lock',
 				'defines'     : [rg_define],
 				'exe_defines' : ['LOCK_TYPE_AllEqualRDXLock',
-						 rg_define],
+						 rg_define] + numa_structure_defines(),
 				'lock_deps'   : [],
 				'other_deps'  : [object_multi_writers_queue,
 						 object_thread_id],
@@ -306,8 +318,9 @@ if not use_llvm:
                              'defines'     : ['RW_BENCH_CLONE']}),
         #('rw_bench_memtrans',{'source'      : 'src/benchmark/rw_bench_clone.c',
         #                     'defines'     : ['RW_BENCH_MEM_TRANSFER']}),
-        ('priority_queue_bench',   {'source'      : 'src/benchmark/priority_queue_bench.c',
-                                    'defines'     : ['PAIRING_HEAP']})]
+        #('priority_queue_bench',   {'source'      : 'src/benchmark/priority_queue_bench.c',
+        #                            'defines'     : ['PAIRING_HEAP']})
+        ]
 	lock_specific_object_defs.update(gcc_specific_object_defs)
 
 
@@ -337,7 +350,7 @@ def create_lock_specific_object(lock_id, lock_specific_object_def_id, variant):
     return env.Object(
         target = lock_specific_object_def_id + '_' + variant['id'] + '.o',
         source = definition['source'],
-        CPPDEFINES = lock_infos[lock_id]['exe_defines'] + definition['defines'] + variant['defines'])
+        CPPDEFINES = [pinning_def] + lock_infos[lock_id]['exe_defines'] + definition['defines'] + variant['defines'])
 
 for lock_id in lock_infos:
     lock_info = lock_infos[lock_id]

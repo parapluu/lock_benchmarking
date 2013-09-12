@@ -7,7 +7,9 @@
 #include "cohort_lock.h"
 #include "utils/numa_node_info_support.h"
 
+
 __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
+
 
 inline
 bool nodeHasWaitingThreads(TicketLock * localLock){
@@ -57,10 +59,16 @@ void cohortlock_write(CohortLock *lock, void * writeInfo) {
     cohortlock_write_read_unlock(lock);
 }
 
+
+
 //Returns true if it is taken over from another writer and false otherwise
 bool cohortlock_write_read_lock(CohortLock *lock) {
+#ifdef PINNING
+    NodeLocalLockData * localData = &lock->localLockData[numa_node.value];
+#else
     myLocalNode.value = numa_node_id();
-    NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value]; 
+    NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value];
+#endif 
     ticketlock_write_read_lock(&localData->lock);
     if(localData->needToTakeGlobalLock.value){
         aticketlock_write_read_lock(&lock->globalLock);
@@ -71,7 +79,11 @@ bool cohortlock_write_read_lock(CohortLock *lock) {
 }
 
 void cohortlock_write_read_unlock(CohortLock * lock) {
+#ifdef PINNING
+    NodeLocalLockData * localData = &lock->localLockData[numa_node.value];
+#else
     NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value];
+#endif
     if(nodeHasWaitingThreads(&localData->lock) && 
        (localData->numberOfHandOvers.value < MAXIMUM_NUMBER_OF_HAND_OVERS)){
         localData->needToTakeGlobalLock.value = false;

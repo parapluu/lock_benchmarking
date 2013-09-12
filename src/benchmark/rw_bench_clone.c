@@ -10,6 +10,7 @@
 #include "benchmark/skiplist/skiplist.h"
 #include "utils/smp_utils.h"
 #include "utils/support_many_lock_types.h"
+#include <sched.h>
 
 //Should be power of 2
 #define NUMBER_OF_ELEMENTS_IN_ARRAYS 64
@@ -17,6 +18,11 @@
 #define ADD_RAND_NUM_MASK (128-1)
 #define FALSE_SHARING_SECURITY 128
 
+
+#ifdef PINNING
+//OBS TODO, this is just to make it compile when pinning is activated
+__thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
+#endif
 
 typedef struct SeedWrapperImpl{
     char pad1[FALSE_SHARING_SECURITY];
@@ -38,6 +44,7 @@ typedef struct LockWrapperImpl{
 } LockWrapper;
 
 typedef struct LockThreadLocalSeedImpl{
+    int thread_id;
     LOCK_DATATYPE_NAME * lock;
     unsigned short * seed;
 } LockThreadLocalSeed;
@@ -144,6 +151,70 @@ void mixed_read_write_benchmark_writer(void * x, void ** writeBackLocation){
     }
 }
 
+
+#ifdef PINNING
+
+int numa_structure[NUMBER_OF_NUMA_NODES][NUMBER_OF_CPUS_PER_NODE] = NUMA_STRUCTURE;
+int core_in_node_counters[NUMBER_OF_NUMA_NODES];
+int next_numa_node = 0;
+bool first = true;
+pthread_mutex_t thread_pin_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void pin(int thread_id){
+    pthread_mutex_lock(&thread_pin_mutex);
+    if(first){
+        first = false;
+        for(int i = 0; i < NUMBER_OF_NUMA_NODES; i++){
+            core_in_node_counters[i] = 0;
+        }
+    }
+
+
+#ifdef NODE_FIRST_POLICY
+    if((core_in_node_counters[next_numa_node] != 0) && (0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE))){
+        next_numa_node++;
+    }
+#endif
+#ifdef CORE_FIRST_POLICY_SANDY
+    if((core_in_node_counters[next_numa_node] != 0) && (0 == (core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE))){
+        next_numa_node++;
+    }
+#endif
+
+    int node = next_numa_node % NUMBER_OF_NUMA_NODES;
+    numa_node.value = node;   
+    int core_in_node = core_in_node_counters[next_numa_node] % NUMBER_OF_CPUS_PER_NODE;
+#ifdef CORE_FIRST_POLICY_SANDY
+    if(((core_in_node+1) % 2) == 0){
+        core_in_node = NUMBER_OF_CPUS_PER_NODE/2 + ((core_in_node+1)/2) - 1;
+    }else if(core_in_node != 0){
+        core_in_node = core_in_node / 2;
+    }
+#endif
+
+    int core_to_pin_to = numa_structure[node][core_in_node]; 
+
+#ifdef SPREAD_PINNING_POLICY
+    next_numa_node++;
+#endif
+    core_in_node_counters[next_numa_node]++;
+
+    int ret = 0;
+    cpu_set_t mask;  
+    unsigned int len = sizeof(mask);
+    CPU_ZERO(&mask);
+    CPU_SET(core_to_pin_to, &mask);
+    ret = sched_setaffinity(0, len, &mask);
+    if (ret == -1){
+        printf("sched_setaffinity failed!!\n");
+        exit(0);
+    }
+    pthread_mutex_unlock(&thread_pin_mutex);
+}
+#endif
+
+
+
 int globalDummy = 0; //To avoid that the compiler optimize away read 
 
 void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
@@ -155,6 +226,11 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
     myXsubi = xsubi;
     int dummy = 0;//To avoid that the compiler optimize away read
     int totalNumberOfCriticalSections = 0;
+
+#ifdef PINNING
+    pin(lockThreadLocalSeed->thread_id);
+#endif
+
     //START LINE
     while(!ACCESS_ONCE(*benchmarkStarted)){
         __sync_synchronize();
@@ -229,6 +305,7 @@ result benchmark_parallel_mixed_read_write(double percentageReadParam,
         LockThreadLocalSeed * lockThreadLocalSeed = &lockThreadLocalSeeds[i];
         lockThreadLocalSeed->seed = seed;
         lockThreadLocalSeed->lock = lock;
+        lockThreadLocalSeed->thread_id = i;
         pthread_create(&threads[i],NULL,&mixed_read_write_benchmark_thread,lockThreadLocalSeed);
     }
     usleep(100000);//To make sure all threads are set up
@@ -299,7 +376,7 @@ int main(int argc, char **argv){
         printf("* Iterations spent in non critical section\n");
         printf("\n");
         printf("Example\n");
-        printf("%s 0.8 10 4 4 64\n", argv[0]);
+        printf("%s 8 0.8 10 4 4 64\n", argv[0]);
     }else{
         int numOfThreads = atoi(argv[1]);
         double percentageRead = atof(argv[2]);

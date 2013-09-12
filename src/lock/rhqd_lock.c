@@ -1,7 +1,6 @@
 #define READ_PATIENCE_LIMIT 130000
 #include "rhqd_lock.h"
 
-
 QDLock * qdlock_create(void (*defaultWriter)(void *, void **)){
     QDLock * lock = (QDLock *)malloc(sizeof(QDLock));
     qdlock_initialize(lock, defaultWriter);
@@ -59,6 +58,10 @@ void waitUntilWriteBarrierOff(RHQDLock *lock) {
         load_acq(writeBarrierOn, lock->writeBarrier.value);
     }
 }
+
+#ifdef PINNING
+extern __thread CacheLinePaddedInt numa_node;
+#endif
 
 inline
 void rhqdlock_write_with_response(RHQDLock *rhqdlock, 

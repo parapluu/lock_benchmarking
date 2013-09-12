@@ -16,6 +16,11 @@ AddOption('--use_cas_fetch_and_add',
           dest='use_cas_fetch_and_add',
           default=False)
 
+AddOption('--use_pinning',
+          action='store_true',
+          dest='use_pinning',
+          default=False)
+
 mode = 'release'
 
 SConscript('SConscript.py', variant_dir='bin', duplicate=0, exports='mode')

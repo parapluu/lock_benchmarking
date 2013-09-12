@@ -47,11 +47,19 @@ bool cohortlock_is_locked(CohortLock *lock){
 
 extern __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
 
+#ifdef PINNING
+extern __thread CacheLinePaddedInt numa_node;
+#endif
+
 inline
 bool cohortlock_is_local_locked(CohortLock *lock){
     int inCounter;
     int outCounter;
-    NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value]; 
+#ifdef PINNING
+    NodeLocalLockData * localData = &lock->localLockData[numa_node.value];
+#else
+    NodeLocalLockData * localData = &lock->localLockData[myLocalNode.value];
+#endif 
     load_acq(inCounter, localData->lock.inCounter.value);
     load_acq(outCounter, localData->lock.outCounter.value);
     return (inCounter != outCounter);
@@ -66,7 +74,6 @@ bool cohortlock_try_write_read_lock(CohortLock *lock) {
     }else{
         return false;
     }
-
 }
 
 #endif

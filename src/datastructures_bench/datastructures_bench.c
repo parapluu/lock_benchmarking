@@ -11,7 +11,7 @@
 #include "smp_utils.h"
 #include <sched.h>
 
-#define PINNING
+
 //#define RANDOM_LOCAL_WORK
 
 //#define MIN_LOCAL_WORK_WHEN_RANDOM 32
@@ -36,7 +36,7 @@ CacheLinePaddedInt enqueues_issued = {.value = 0};
 #endif
 
 
-
+#define PINNING
 #ifdef PINNING
 __thread CacheLinePaddedInt numa_node __attribute__((aligned(128)));
 //#define CORE_FIRST_POLICY_SANDY
