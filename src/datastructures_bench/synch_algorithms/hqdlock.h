@@ -265,12 +265,37 @@ void drmvqueue_free(DRMWQueue * queue){
     free(queue);
 }
 
+#define NEWOFFER
+#ifdef NEWOFFER
+
 inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
     if(!closed){
         int index = FETCH_AND_ADD(&queue->elementCount.value, 1);
+        if(index < MWQ_CAPACITY){
+            store_rel(queue->elements[index].responseLocation, e.responseLocation);
+            store_rel(queue->elements[index].data, e.data);
+            store_rel(queue->elements[index].request, e.request);
+            __sync_synchronize();//Flush
+            return true;
+        }else{
+            return false;
+        }
+    }else{
+        return false;
+    }
+}
+
+#else
+
+inline
+bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
+    bool closed;
+    load_acq(closed, queue->closed.value);
+    if(!closed){
+        int index = __sync_fetch_and_add(&queue->elementCount.value, 1);
         if(index < MWQ_CAPACITY){
             store_rel(queue->elements[index].responseLocation, e.responseLocation);
             store_rel(queue->elements[index].data, e.data);
@@ -286,11 +311,9 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
         return false;
     }
 }
-//#define QUEUE_STATS
-#ifdef QUEUE_STATS
-__thread int in_queue = 0;
-__thread int flushs = 0;
+
 #endif
+
 
 inline
 void drmvqueue_flush(DRMWQueue * queue){
@@ -300,6 +323,9 @@ void drmvqueue_flush(DRMWQueue * queue){
     bool closed = false;
     load_acq(numOfElementsToRead, queue->elementCount.value);
     if(numOfElementsToRead >= MWQ_CAPACITY){
+#ifdef NEWOFFER
+        store_rel(queue->closed.value, true);
+#endif
         closed = true;
         numOfElementsToRead = MWQ_CAPACITY;
     }
@@ -342,10 +368,16 @@ void drmvqueue_flush(DRMWQueue * queue){
                 numOfElementsToRead = 
                     min(get_and_set_ulong(&queue->elementCount.value, MWQ_CAPACITY + 1), 
                         MWQ_CAPACITY);
+#ifdef NEWOFFER
+                store_rel(queue->closed.value, true);
+#endif
 		closed = true;
             }else if(newNumOfElementsToRead < MWQ_CAPACITY){
                 numOfElementsToRead = newNumOfElementsToRead;
             }else{
+#ifdef NEWOFFER
+                store_rel(queue->closed.value, true);
+#endif
                 closed = true;
                 numOfElementsToRead = MWQ_CAPACITY;
             }
