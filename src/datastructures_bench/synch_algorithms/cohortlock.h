@@ -461,6 +461,10 @@ void cohortlock_write_read_unlock(CohortLock * lock) {
 
     }else{
         localData->needToTakeGlobalLock.value = true;
+#ifdef QUEUE_STATS
+        helpSeasonsPerformed.value++;
+        numberOfDeques.value =  numberOfDeques.value + localData->numberOfHandOvers.value;
+#endif
         localData->numberOfHandOvers.value = 0;
         aticketlock_write_read_unlock(&lock->globalLock);
         ticketlock_write_read_unlock(&localData->lock);
