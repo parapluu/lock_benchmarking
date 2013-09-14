@@ -10,7 +10,7 @@
 #include "utils/thread_identifier.h"
 
 
-#define READ_PATIENCE_LIMIT 1000
+#define READ_PATIENCE_LIMIT 130000
 
 inline
 bool isWriteLocked(WPRWLock * lock){
