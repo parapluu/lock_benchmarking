@@ -17,6 +17,8 @@ Import('mode')
 use_cpp_locks = GetOption('cpp_locks')
 use_llvm = GetOption('use_llvm')
 use_pinning = GetOption('use_pinning')
+use_queue_stats = GetOption('use_queue_stats')
+use_print_thread_queue_stats = GetOption('use_print_thread_queue_stats')
 
 use_cas_fetch_and_add = GetOption('use_cas_fetch_and_add')
 
@@ -329,9 +331,11 @@ if not use_llvm:
 benchmarks_scripts = ['compare_benchmarks.py',
                       'benchmark_lock.py',
                       'perf_magic',
-                      'benchmark_lock_XNonCW.py',
+                      'perf_magic_simple',
+		      'benchmark_lock_XNonCW.py',
                       'benchmark_lockXOpDist.py',
                       'cache_benchmark_lock.py',
+		      'cache_benchmark_lock_simple.py',
                       'cache_benchmark_lock_XNonCW.py',
                       'cache_benchmark_lockXOpDist.py',
                       'run_benchmarks_on_intel_i7.py',
@@ -472,6 +476,14 @@ benchmarked_locks = [
     {'lock_defines': ['USE_COHORTLOCK'],
      'lock_alias' : 'cohortlock'}] 
 
+
+queue_stats_define = 'NO_QUEUE_STATS'
+print_thread_queue_stats_define = 'NO_PRINT_THREAD_QUEUE_STATS'
+if use_queue_stats:
+    queue_stats_define = 'QUEUE_STATS'
+    if use_print_thread_queue_stats:
+        print_thread_queue_stats_define = 'PRINT_THREAD_QUEUE_STATS'
+
 for locked_data_stucture in locked_data_stuctures:
     for benchmarked_lock in benchmarked_locks:
         data_structure_define = locked_data_stucture['data_structure_define']
@@ -481,7 +493,11 @@ for locked_data_stucture in locked_data_stuctures:
         object = env.Object(
             target = (data_structure_alias + '_' + lock_alias + '.o'),
             source = ['src/datastructures_bench/datastructures_bench.c'],
-            CPPDEFINES = [data_structure_define] + lock_defines + numa_structure_defines())
+            CPPDEFINES = ([data_structure_define,
+			   print_thread_queue_stats_define,
+			   queue_stats_define] + 
+			  lock_defines + 
+			  numa_structure_defines()))
         env.Program(
             target = (data_structure_alias + '_' + lock_alias),
             source = [object])
@@ -490,7 +506,9 @@ if not use_llvm:
 	fetch_and_add_bench_object = env.Object(
 	    target = ('fetch_and_add_bench.o'),
 	    source = ['src/datastructures_bench/datastructures_bench.c'],
-	    CPPDEFINES = ['USE_SHARED_FETCH_AND_ADD'] + numa_structure_defines())
+	    CPPDEFINES = ['USE_SHARED_FETCH_AND_ADD',
+			  print_thread_queue_stats_define,
+			  queue_stats_define] + numa_structure_defines())
 	env.Program(
 	    target = ('fetch_and_add_bench'),
 	    source = [fetch_and_add_bench_object])

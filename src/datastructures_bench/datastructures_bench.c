@@ -894,8 +894,9 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
 
 #ifdef QUEUE_STATS
 #ifdef PRINT_THREAD_QUEUE_STATS
-    printf("h%ld\n", helpSeasonsPerformed.value);
-    printf("d%ld\n", numberOfDeques.value);
+    printf("NUMA NODE: %d\n", numa_node.value);
+    printf("help sessions: %lu\n", helpSeasonsPerformed.value);
+    printf("helped operat: %lu\n", numberOfDeques.value);
 #endif
     lockThreadLocalSeed->helpSeasonsPerformed = helpSeasonsPerformed.value;
     lockThreadLocalSeed->numberOfDeques = numberOfDeques.value;
@@ -1004,6 +1005,7 @@ result benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
     result r;
     r.ops = totalNumberOfOperations;
     r.time = benchmarRealTime;
+
     return r;
 }
 

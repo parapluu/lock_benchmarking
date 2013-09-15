@@ -21,6 +21,16 @@ AddOption('--use_pinning',
           dest='use_pinning',
           default=False)
 
+AddOption('--use_queue_stats',
+          action='store_true',
+          dest='use_queue_stats',
+          default=False)
+
+AddOption('--use_print_thread_queue_stats',
+          action='store_true',
+          dest='use_print_thread_queue_stats',
+          default=False)
+
 mode = 'release'
 
 SConscript('SConscript.py', variant_dir='bin', duplicate=0, exports='mode')
