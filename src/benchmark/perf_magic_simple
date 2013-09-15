@@ -1,0 +1,115 @@
+#!/bin/bash
+
+HUMAN_READABLE=
+
+echo RUNNING
+
+FILE=$@
+if [ "$FILE" == "-" ] || [ "$FILE" == "" ]
+then
+	index=0
+	while read line
+	do
+		echo line 
+		input=$(echo $line | egrep " r....:u" | sed -e 's/,//g;s/r....:u//g;s/[[:space:]]\+/ /g')
+		echo "HEJ"
+		echo $input
+		if [ "$input" == "" ]
+		then
+			continue
+		fi
+		ARR[$index]=$input
+		index=$((index+1))
+	done
+elif ! [ -f $FILE ]
+then
+	echo "file '$FILE' not found."
+	exit
+else
+	ARR=($(egrep " r....:u" $FILE | sed -e 'N;N;N;s/,//g;s/r....:u//g;s/[[:space:]]\+/ /g'))
+fi
+
+rate() {
+	if [ $HUMAN_READABLE ]
+	then
+		echo $(dc -e "2 k $1 100 * $2 / p")%
+	else
+		echo $(dc -e "10 k $1 $2 / p")
+	fi
+}
+
+amount() {
+	if [ $HUMAN_READABLE ]
+	then
+		if [ $1 -gt 1000000000 ]
+		then
+			echo $(dc -e "2 k $1 1000000000 / p") x10^9
+		elif [ $1 -gt 1000000 ]
+		then
+			echo $(dc -e "2 k $1 1000000 / p") x10^6
+		elif [ $1 -gt 1000 ]
+		then
+			echo $(dc -e "2 k $1 1000 / p") x10^3
+		else
+			echo $1
+		fi
+	else
+		echo $1
+	fi
+}
+
+L1=${ARR[0]}
+L2=${ARR[1]}
+L3=${ARR[2]}
+ALL=${ARR[3]}
+
+L1_MISS=$(($ALL - $L1))
+L1_REFS=$ALL
+L1_HIT_RATE=$(rate ${L1} ${L1_REFS})
+L1_MISS_RATE=$(rate ${L1_MISS} ${L1_REFS})
+
+L2_MISS=$(($ALL - $L2 - $L1))
+L2_REFS=$(($ALL - $L1))
+L2_HIT_RATE=$(rate ${L2} ${L2_REFS})
+L2_MISS_RATE=$(rate ${L2_MISS} ${L2_REFS})
+
+L3_MISS=$(($ALL - $L3 - $L2 - $L1))
+L3_REFS=$(($ALL - $L2 - $L1))
+L3_HIT_RATE=$(rate ${L3} ${L3_REFS})
+L3_MISS_RATE=$(rate ${L3_MISS} ${L3_REFS})
+
+if [ $HUMAN_READABLE ]
+then
+	echo "memory loads: $(amount $ALL)"
+	echo
+	echo "L1 hits: $(amount $L1)"
+	echo "L1 misses: $(amount $L1_MISS)"
+	echo "L1 hit rate: ${L1_HIT_RATE}"
+	echo "L1 miss rate: ${L1_MISS_RATE}"
+	echo 
+	echo "L2 hits: $(amount $L2)"
+	echo "L2 misses: $(amount $L2_MISS)"
+	echo "L2 hit rate: ${L2_HIT_RATE}"
+	echo "L2 miss rate: ${L2_MISS_RATE}"
+	echo
+	echo "L3 hits: $(amount $L3)"
+	echo "L3 misses: $(amount $L3_MISS)"
+	echo "L3 hit rate: ${L3_HIT_RATE}"
+	echo "L3 miss rate: ${L3_MISS_RATE}"
+
+else
+	echo -n " $(amount $ALL)"
+	echo -n " $(amount $L1)"
+	echo -n " $(amount $L1_MISS)"
+	echo -n " ${L1_HIT_RATE}"
+	echo -n " ${L1_MISS_RATE}"
+	echo -n " $(amount $L2)"
+	echo -n " $(amount $L2_MISS)"
+	echo -n " ${L2_HIT_RATE}"
+	echo -n " ${L2_MISS_RATE}"
+	echo -n " $(amount $L3)"
+	echo -n " $(amount $L3_MISS)"
+	echo -n " ${L3_HIT_RATE}"
+	echo -n " ${L3_MISS_RATE}"
+
+fi
