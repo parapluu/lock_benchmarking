@@ -200,6 +200,9 @@ typedef struct DelegateRequestEntryImpl {
     void (*request)(int, int*);
     int data;
     int * responseLocation;
+#ifdef PAD_QUEUE_ELEMENTS_TO_TWO_CACHE_LINES
+    char pad[128 - ((2*sizeof(void *)) + sizeof(int))];
+#endif
 } DelegateRequestEntry;
 
 typedef struct DRMWQImpl {
