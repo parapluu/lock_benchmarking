@@ -8,19 +8,19 @@ implementations and a set of benchmarks.
 
 ### QD Lock ###
 
-**Main file**: src/datastructures_bench/synch_algorithms/qdlock.h
+**Main file:** src/datastructures_bench/synch_algorithms/qdlock.h
 
-**Lock Description:**: Queue Delegation Locking paper submitted to PPoPP 
+**Lock Description:** See queue delegation locking paper 
 
 ### HQD Lock ###
 
-**Main file**: src/datastructures_bench/synch_algorithms/hqdlock.h
+**Main file:** src/datastructures_bench/synch_algorithms/hqdlock.h
 
-**Lock Description:**: Queue Delegation Locking paper submitted to PPoPP 
+**Lock Description:** See queue delegation locking paper 
 
 ### Flat Combining ###
 
-**Main file**: src/datastructures_bench/synch_algorithms/flat_comb.h
+**Main file:** src/datastructures_bench/synch_algorithms/flat_comb.h
 
 **Lock Description:**: Flat combining is described in
   ["Flat combining and the synchronization-parallelism tradeoff"][FCPaper].
@@ -32,13 +32,13 @@ implementations and a set of benchmarks.
 
 ### CC-Synch and H-Synch ###
 
-**Main files**: src/datastructures_bench/synch_algorithms/hsynch.h and
+**Main files:** src/datastructures_bench/synch_algorithms/hsynch.h and
   src/datastructures_bench/synch_algorithms/ccsynch.h
 
-**Lock Description:**: CC-Synch and H-Synch is described in
+**Lock Description:** CC-Synch and H-Synch is described in
   ["Revisiting the combining synchronization technique"][SynchPaper].
   The CC-Synch and H-Synch implementations are taken from the source
-  [code provided by the authors][SynchSource]] of CC-Synch and
+  [code provided by the authors][SynchSource] of CC-Synch and
   H-Synch.
 
 [SynchPaper]: http://dl.acm.org/citation.cfm?id=2145849
@@ -46,24 +46,24 @@ implementations and a set of benchmarks.
 
 ### Cohort Lock ###
 
-**Main files**: src/lock/cohort_lock.h and src/lock/cohort_lock.c
+**Main files:** src/lock/cohort_lock.h and src/lock/cohort_lock.c
 
-**Lock Description:**: The cohort lock is described in
+**Lock Description:** The cohort lock is described in
   ["Lock cohorting: a general technique for designing NUMA locks"][CohortPaper].
 
 [CohortPaper]: http://dl.acm.org/citation.cfm?id=2145848
 
 ### MR-QD and MR-HQD locks ###
 
-**Main files**: src/lock/agnostic_rdx_lock.c,
+**Main files:** src/lock/agnostic_rdx_lock.c,
   src/lock/agnostic_rdx_lock.h, src/lock/rhqd_lock.c and
   src/lock/rhqd_lock.h
 
-**Lock Description:**: Queue Delegation Locking paper submitted to PPoPP
+**Lock Description:** Queue Delegation Locking paper submitted to PPoPP
 
 ### Write-Preference Reader-Writer locks ###
 
-**Main files**: src/lock/wprw_lock.c and src/lock/wprw_lock.c 
+**Main files:** src/lock/wprw_lock.c and src/lock/wprw_lock.c 
 
 **Lock Description:**: Write-preference reader writer locks (DR-MCS
   and Cohort based) are both described in
@@ -88,7 +88,7 @@ probably not work on other platforms without modification.
 
 ## Build ##
 
-`scons `
+`scons`
 
 Builds standard lock object files and benchmarks.
 
@@ -99,34 +99,34 @@ not work when `--use_pinning` is specified.
 
 `scons --use_queue_stats`
 
-With this option set the data structure benchmark will produce
+With this option set, the data structure benchmark will produce
 statistics about how many operations that have been helped during
 every help session.
 
 `scons --use_print_thread_queue_stats`
 
 This option together with the `--use_queue_stats` option will cause
-the data structure benchmark to print per thread statistics about how
-many operations that have been helped by every thread. Using this is
-not recommended for measurements, but it can be helpful for debugging.
+the data structure benchmark to print per thread statistics. Using
+this is not recommended for measurements, but it can be helpful for
+debugging.
 
 ## Tests ##
 
-For example `./bin/test_tatasdx` will run tests for the qd lock.
+For example `./bin/test_tatasdx` will run tests for the QD lock.
 
 ## Benchmarks ##
 
 ### Data Structure Benchmark ###
 
 The data structure benchmark is described in the Queue Delegation
-Locking paper submitted to PPoPP. It measure the throughput for a
+Locking paper submitted to PPoPP. It measures the throughput for a
 concurrent priority queue implemented by protecting a pairing heap
 with QD locking, CC-Synch, H-Synch, flat combining etc. The benchmark
 is implemented in `src/benchmark/datastructures_bench.c`. It has several
 parameters that can be used to change, for example, the amount of thread
-local work. Note that the benchmark pin threads to hardware threads
+local work. Note that the benchmark pins threads to hardware threads
 and if the pinning does not work it might give unpredictable results,
-especially for the the NUMA-aware locks.
+especially for the NUMA-aware locks.
 
 **How to run example:**
 
