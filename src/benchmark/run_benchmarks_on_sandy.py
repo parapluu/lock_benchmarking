@@ -25,13 +25,13 @@ command = [
     '0.0,0.25,0.5,0.8,0.9,0.95,0.99,1.0',
     #Seconds to run the benchmark (comma separated list)
     '1',
-    #Numper of work items performed in write-critical seciton (comma
+    #Number of work items performed in write-critical section (comma
     #separated list)
     '4',
-    #Numper of work items performed in read-critical seciton (comma
+    #Number of work items performed in read-critical section (comma
     #separated list)
     '4',
-    #Numper of work items performed in non-critical seciton (comma
+    #Number of work items performed in non-critical section (comma
     #separated list)
     '0,64']
 
