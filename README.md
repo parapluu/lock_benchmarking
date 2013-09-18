@@ -190,8 +190,8 @@ following can be used to produce graphs for the benchmark:
     ../bin/compare_benchmarks.py gen_graphs.py *
 
 This will produce a couple a graphs in PNG and PDF formats and a file
-called `gen_graphs.py`. `gen_graphs.py` can be changed to change the
-appearance of the graph.
+called `gen_graphs.py` that can be changed to change the appearance of
+the graphs.
 
 
     
