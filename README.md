@@ -74,7 +74,7 @@ implementations and a set of benchmarks.
 ### Other locks ###
 
 Other locks that can be found in the repository are TATAS, MCS, CLH,
-Ticket-lock, partitioned ticket lock etc.
+ticket-lock, partitioned ticket lock, etc.
 
 ### Requirements ###
 
@@ -100,7 +100,7 @@ not work when `--use_pinning` is specified.
 `scons --use_queue_stats`
 
 With this option set, the data structure benchmark will produce
-statistics about how many operations that have been helped during
+statistics about how many operations have been helped during
 every help session.
 
 `scons --use_print_thread_queue_stats`
@@ -118,14 +118,14 @@ For example `./bin/test_tatasdx` will run tests for the QD lock.
 
 ### Data Structure Benchmark ###
 
-The data structure benchmark is described in the Queue Delegation
-Locking paper submitted to PPoPP. It measures the throughput for a
-concurrent priority queue implemented by protecting a pairing heap
-with QD locking, CC-Synch, H-Synch, flat combining etc. The benchmark
-is implemented in `src/benchmark/datastructures_bench.c`. It has several
-parameters that can be used to change, for example, the amount of thread
-local work. Note that the benchmark pins threads to hardware threads
-and if the pinning does not work it might give unpredictable results,
+The data structure benchmark is described in the queue delegation
+locking paper. It measures the throughput for a concurrent priority
+queue implemented by protecting a pairing heap with QD locking,
+CC-Synch, H-Synch, flat combining etc. The benchmark is implemented in
+`src/benchmark/datastructures_bench.c`. It has several parameters that
+can be used to change, for example, the amount of thread local
+work. Note that the benchmark pins threads to hardware threads and if
+the pinning does not work it might give unpredictable results,
 especially for the NUMA-aware locks.
 
 **How to run example:**
@@ -144,11 +144,11 @@ parameters.
 ### RWBench ###
 
 The RWBench benchmark is described in "NUMA-aware reader-writer locks"
-paper and in the Queue Delegation Locking paper submitted to PPoPP. It
-measure the throughput of read and write critical sections performed by
-a number of threads. The benchmark is implemented in the file
-`src/datastructures_bench/rw_bench_clone.c`.  Note that the
-benchmark pin threads to hardware threads when the compile option
+paper and in the queue delegation locking paper. It measure the
+throughput of read and write critical sections performed by a number
+of threads. The benchmark is implemented in the file
+`src/datastructures_bench/rw_bench_clone.c`.  Note that the benchmark
+pin threads to hardware threads when the compile option
 `--use_pinning` has been specified and if the pinning does not work it
 might give unpredictable results, especially for the the NUMA-aware
 locks.
