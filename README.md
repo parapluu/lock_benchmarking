@@ -166,11 +166,11 @@ parameters.
 
 ### Run benchmarks script ###
 
-`bin/benchmark_lock.py` can be used to run the benchmark with
-different parameters. See the content of the file
-`bin/run_benchmarks_on_intel_i7.py` for an explanation of the parameters.
-To run the pairing heap benchmarks on an 8-thread Intel i7 CPU,
-you can run the command:
+The script `bin/benchmark_lock.py` can be used to run the benchmark
+with different parameters. See the content of the file
+`bin/run_benchmarks_on_intel_i7.py` for an explanation of the
+parameters.  To run the pairing heap benchmarks on an 8-thread Intel
+i7 CPU, you can run the command:
 
 `bin/run_benchmarks_on_intel_i7.py`
 
