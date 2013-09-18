@@ -168,11 +168,11 @@ parameters.
 
 `bin/benchmark_lock.py` can be used to run the benchmark with
 different parameters. See the content of the file
-`bin/run_benchmarks_on_sandy.py` for an explanation of the parameters.
-To run the pairing heap benchmarks for a 64-thread Intel sandybridge,
+`bin/run_benchmarks_on_intel_i7.py` for an explanation of the parameters.
+To run the pairing heap benchmarks on an 8-thread Intel i7 CPU,
 you can run the command:
 
-`bin/run_benchmarks_on_sandy.py`
+`bin/run_benchmarks_on_intel_i7.py`
 
 The file `bin/benchmark_lock_XNonCW.py` is similar to
 `bin/benchmark_lock.py` but is used to generate data for the graphs
