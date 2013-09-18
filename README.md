@@ -55,8 +55,7 @@ implementations and a set of benchmarks.
 
 ### MR-QD and MR-HQD locks ###
 
-**Main files:** src/lock/agnostic_rdx_lock.{c, h},
-  src/lock/agnostic_rdx_lock.{c, h}, src/lock/rhqd_lock.{c, h}
+**Main files:** src/lock/agnostic_rdx_lock.{c, h}, src/lock/rhqd_lock.{c, h}
 
 **Lock Description:** Queue delegation locking paper
 
