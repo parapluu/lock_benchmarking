@@ -179,10 +179,10 @@ The file `bin/benchmark_lock_XNonCW.py` is similar to
 where the x-axis shows the amount of thread-local work between the
 operations.
 
-### Produce Benchmark Graphs Script ###
+### Produce benchmark graphs ###
 
 The script `./bin/compare_benchmarks.py` can be used to produce
-graphs. For example if you have ran
+graphs. For example if you have run
 `bin/run_benchmarks_on_intel_i7.py` without any modifications the
 following can be used to produce graphs for the benchmark:
 
