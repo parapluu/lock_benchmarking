@@ -59,7 +59,7 @@ implementations and a set of benchmarks.
   src/lock/agnostic_rdx_lock.h, src/lock/rhqd_lock.c and
   src/lock/rhqd_lock.h
 
-**Lock Description:** Queue Delegation Locking paper submitted to PPoPP
+**Lock Description:** Queue delegation locking paper
 
 ### Write-Preference Reader-Writer locks ###
 
