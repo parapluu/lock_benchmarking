@@ -20,8 +20,6 @@ parameters = sys.argv
 
 parameters.pop(0)
 
-iterations = int(parameters.pop(0))
-
 if len(parameters) < 10:
     print """Not enough parameters:
 
@@ -31,6 +29,10 @@ parameters.
 
 """
     sys.exit()
+
+
+iterations = int(parameters.pop(0))
+
 
 output_dir_base = parameters.pop(0)
 
