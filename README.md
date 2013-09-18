@@ -10,13 +10,13 @@ implementations and a set of benchmarks.
 
 **Main file**: src/datastructures_bench/synch_algorithms/qdlock.h
 
-**Lock Description:**: Queue Delegation Locking paper submitted to PPOPP 
+**Lock Description:**: Queue Delegation Locking paper submitted to PPoPP 
 
 ### HQD Lock ###
 
 **Main file**: src/datastructures_bench/synch_algorithms/hqdlock.h
 
-**Lock Description:**: Queue Delegation Locking paper submitted to PPOPP 
+**Lock Description:**: Queue Delegation Locking paper submitted to PPoPP 
 
 ### Flat Combining ###
 
@@ -37,7 +37,7 @@ implementations and a set of benchmarks.
 
 **Lock Description:**: CC-Synch and H-Synch is described in
   ["Revisiting the combining synchronization technique"][SynchPaper].
-  The CC-Synch and H-Synch implementations are taken from teh source
+  The CC-Synch and H-Synch implementations are taken from the source
   ["code provided by the authors"][SynchSource]] of CC-Synch and
   H-Synch.
 
@@ -59,13 +59,13 @@ implementations and a set of benchmarks.
   src/lock/agnostic_rdx_lock.h, src/lock/rhqd_lock.c and
   src/lock/rhqd_lock.h
 
-**Lock Description:**: Queue Delegation Locking paper submitted to PPOPP
+**Lock Description:**: Queue Delegation Locking paper submitted to PPoPP
 
 ### Write-Preference Reade-Writer locks ###
 
 **Main files**: src/lock/wprw_lock.c and src/lock/wprw_lock.c 
 
-**Lock Description:**: Write-Preference reader writer locks (DR-MCS
+**Lock Description:**: Write-preference reader writer locks (DR-MCS
   and Cohort based) are both described in
   ["NUMA-aware reader-writer locks"][NumaRWPaper].
 
@@ -83,6 +83,8 @@ Ticket-lock, partitioned ticket lock etc.
 
 The code has ony been tested on x86-64 systems running Linux and will
 probably not work on other platforms without modification.
+
+* python and matplotlib for producing graphs from the gathered data
 
 ## Build ##
 
@@ -105,7 +107,8 @@ every help session.
 
 This option together with the `--use_queue_stats` option will cause
 the data structure benchmark to print per thread statistics about how
-many operations that have been helped by every thread.
+many operations that have been helped by every thread. Using this is
+not recommended for measurements, but it can be helpful for debugging.
 
 ## Tests ##
 
@@ -165,11 +168,11 @@ parameters.
 
 `bin/benchmark_lock.py` can be used to run the benchmark with
 different parameters. See the content of the file
-`bin/run_benchmarks_on_intel_i7.py` for an explanation of the
-parameters. To run the pairing heap benchmarks for intel i7, you can
-run the command:
+`bin/run_benchmarks_on_sandy.py` for an explanation of the parameters.
+To run the pairing heap benchmarks for a 64-thread Intel sandybridge,
+you can run the command:
 
-`bin/run_benchmarks_on_intel_i7.py`
+`bin/run_benchmarks_on_sandy.py`
 
 The file `bin/benchmark_lock_XNonCW.py` is similar to
 `bin/benchmark_lock.py` but is used to generate data for the graphs
@@ -180,14 +183,14 @@ operations.
 
 The script `./bin/compare_benchmarks.py` can be used to produce
 graphs. For example if you have ran
-`bin/run_benchmarks_on_intel_i7.py` without any modifications the
+`bin/run_benchmarks_on_sandy.py` without any modifications the
 following can be used to produce graphs for the benchmark:
 
     cd bench_results
     ../bin/compare_benchmarks.py gen_graphs.py *
 
-This will produce a couple a graphs in PNG formats. gen_graphs.py can
-be changed to change the appearance of the graph.
+This will produce a couple a graphs in PNG and PDF formats.
+gen_graphs.py can be changed to change the appearance of the graph.
 
 
     
