@@ -46,7 +46,7 @@ implementations and a set of benchmarks.
 
 ### Cohort Lock ###
 
-**Main files:** src/lock/cohort_lock.h and src/lock/cohort_lock.c
+**Main files:** src/lock/cohort_lock.{c, h }
 
 **Lock Description:** The cohort lock is described in
   ["Lock cohorting: a general technique for designing NUMA locks"][CohortPaper].
@@ -55,15 +55,14 @@ implementations and a set of benchmarks.
 
 ### MR-QD and MR-HQD locks ###
 
-**Main files:** src/lock/agnostic_rdx_lock.c,
-  src/lock/agnostic_rdx_lock.h, src/lock/rhqd_lock.c and
-  src/lock/rhqd_lock.h
+**Main files:** src/lock/agnostic_rdx_lock.{c, h},
+  src/lock/agnostic_rdx_lock.{c, h}, src/lock/rhqd_lock.{c, h}
 
 **Lock Description:** Queue delegation locking paper
 
 ### Write-Preference Reader-Writer locks ###
 
-**Main files:** src/lock/wprw_lock.c and src/lock/wprw_lock.c 
+**Main files:** src/lock/wprw_lock.{c, h} 
 
 **Lock Description:**: Write-preference reader writer locks (DR-MCS
   and Cohort based) are both described in
