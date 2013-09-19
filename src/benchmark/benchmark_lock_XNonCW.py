@@ -20,7 +20,7 @@ parameters = sys.argv
 
 parameters.pop(0)
 
-if len(parameters) < 12:
+if len(parameters) < 11:
     print """Not enough parameters:
 
 Look at bin/run_benchmarks_on_intel_i7.py and
