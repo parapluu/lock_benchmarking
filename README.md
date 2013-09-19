@@ -188,9 +188,9 @@ graphs. For example if you have run
 following can be used to produce graphs for the benchmark:
 
     cd bench_results
-    ../bin/compare_benchmarks.py gen_graphs.py *
+    ../bin/compare_benchmarks.py gen_graphs.py $(find . -mindepth 1 -type d)
 
-This will produce a couple a graphs in PNG and PDF formats and a file
-called `gen_graphs.py` that can be changed to change the appearance of
-the graphs.
+This will produce a couple a graphs in PNG format and a file called
+`gen_graphs.py` that can be changed to change the appearance of the
+graphs.
 
