@@ -76,10 +76,10 @@ ticket-lock, partitioned ticket lock, etc.
 
 ### Requirements ###
 
-* GCC (Tested with gcc version 4.7.2)
+* [GCC](http://gcc.gnu.org/) for compilation of the code (tested with gcc version 4.7.2)
 * [SCons](http://www.scons.org/) for the build system (tested with scons version 2.1.0)
 
-The code has so far only been tested on x86-64 systems running Linux.
+The code has so far been tested only on x86-64 systems running Linux.
 It may not work on other platforms without modification.
 
 * python and matplotlib for producing graphs from the gathered data
