@@ -18,14 +18,14 @@ def read_dat_file(the_file):
         for line in lines:
             p = line.split()
             x.append(float(p[0]))
-            y.append(float(p[1])/float(p[2]))
+            y.append(float(p[2])/float(p[1]))
         return (x, y)
 
 def set_up_figure(title):
     plt.figure()
     plt.autoscale(enable=True, tight=False)
     plt.xlabel('Number of Threads')
-    plt.ylabel('Microseconds / Operation') 
+    plt.ylabel('Operations / Microsecond') 
     plt.title(title)
 
 
