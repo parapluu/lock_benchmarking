@@ -1,10 +1,10 @@
-Mutual Exclusion Algorithms and Benchmarks 
-==========================================
+Mutual Exclusion Locks and Benchmarks 
+=====================================
 
 This repository contains lock implementations, delegation lock
 implementations and a set of benchmarks.
 
-## Lock implementations ##
+## Lock Implementations ##
 
 ### QD Lock ###
 
