@@ -77,14 +77,14 @@ ticket-lock, partitioned ticket lock, etc.
 ### Requirements ###
 
 * GCC (Tested with gcc version 4.7.2)
-* [SCons](http://www.scons.org/) (build system)
+* [SCons](http://www.scons.org/) for the build system (tested with scons version 2.1.0)
 
-The code has only been tested on x86-64 systems running Linux and will
-probably not work on other platforms without modification.
+The code has so far only been tested on x86-64 systems running Linux.
+It may not work on other platforms without modification.
 
 * python and matplotlib for producing graphs from the gathered data
 
-## Build ##
+## How to Build ##
 
 `scons`
 
@@ -132,14 +132,12 @@ work. Note that the benchmark pins threads to hardware threads and if
 the pinning does not work it might give unpredictable results,
 especially for the NUMA-aware locks.
 
-**How to run example:**
+**An example:**
 
     $ ./bin/rw_bench_clone_wprwcohort_rgnzi  8 0.8 10 4 4 32
     => Benchmark 8 threads
     8 10000104 64207442
     || 10000104 microseconds, 64207442 operations (8 threads)
-
-
 
 Run `./bin/pairing_heap_bench_qdlock` for a description of the
 parameters.
@@ -156,13 +154,12 @@ pins threads to hardware threads when the compile option
 `--use_pinning` has been specified, and if the pinning does not work it
 might give unpredictable results, especially for the NUMA-aware locks.
 
-**How to run example:**
+**An example:**
 
     $ ./bin/pairing_heap_bench_qdlock  8 0.5 10 1 0 0
     => Benchmark 8 threads
     8 10014853 26388210
     || 10014853 microseconds, 26388210 operations, (8 threads)
-
 
 Run `./bin/pairing_heap_bench_qdlock` for a description of the
 parameters.
