@@ -69,12 +69,12 @@ implementations and a set of benchmarks.
 
 [NumaRWPaper]: http://dl.acm.org/citation.cfm?id=2442532
 
-### Other locks ###
+### Other Locks ###
 
 Other locks that can be found in the repository are TATAS, MCS, CLH,
 ticket-lock, partitioned ticket lock, etc.
 
-### Requirements ###
+## Requirements ##
 
 * [GCC](http://gcc.gnu.org/) for compilation of the code (tested with gcc version 4.7.2)
 * [SCons](http://www.scons.org/) for the build system (tested with scons version 2.1.0)
@@ -97,9 +97,9 @@ cohort lock (`test_cohort`), cohort based write-preference RW
 (`test_wprwcohort_rgnzi`) and hierarchical multi-reader QD
 (`test_rhqdlock_rgnzi`) should not be used when `--use_pinning` is
 enabled. The reason for this is that when pinning is enabled, the NUMA
-aware locks will rely on that the threads stay on the same node all
-the time, but pinning is not enabled in the tests. To test these locks,
-first compile without `--use_pinning`.
+aware locks rely on the threads staying on the same node all the time,
+but pinning is not enabled in the tests. To test these locks, first
+compile without `--use_pinning`.
 
 `scons --use_queue_stats`
 
