@@ -37,8 +37,7 @@ iterations = int(parameters.pop(0))
 output_dir_base = parameters.pop(0)
 
 if output_dir_base=='standard':
-    output_dir_base = (subprocess.check_output(['git', 'rev-parse', 'HEAD'])[-11:-1] 
-                       + '_' + datetime.datetime.now().strftime("%Y.%m.%d.%H.%M.%S"))
+    output_dir_base = (datetime.datetime.now().strftime("%Y.%m.%d.%H.%M.%S")) #subprocess.check_output(['git', 'rev-parse', 'HEAD'])[-11:-1] 
 
 benchmark_names = parameters.pop(0).split(',')
 
