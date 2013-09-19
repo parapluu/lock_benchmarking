@@ -94,7 +94,7 @@ Builds standard lock object files and benchmarks.
 
 Builds RWBench with thread pinning to hardware threads. The tests for
 cohort lock (`test_cohort`), cohort based write-preference RW
-(`test_wprwcohort_rgnzi`) and hierarchical multi-reader QD
+(`test_wprwcohort_rgnzi`) and hierarchical multi-reader QD lock
 (`test_rhqdlock_rgnzi`) should not be used when `--use_pinning` is
 enabled. The reason for this is that when pinning is enabled, the NUMA
 aware locks rely on the threads staying on the same node all the time,
@@ -173,7 +173,7 @@ with different parameters. See the content of the file
 parameters.  To run the pairing heap benchmarks on an 8-thread Intel
 i7 CPU, you can run the command:
 
-`bin/run_benchmarks_on_intel_i7.py`
+`./bin/run_benchmarks_on_intel_i7.py`
 
 The file `bin/benchmark_lock_XNonCW.py` is similar to
 `bin/benchmark_lock.py` but is used to generate data for the graphs
@@ -182,7 +182,7 @@ operations.
 
 ### Produce Benchmark Graphs ###
 
-The script `./bin/compare_benchmarks.py` can be used to produce
+The script `bin/compare_benchmarks.py` can be used to produce
 graphs. For example if you have run
 `bin/run_benchmarks_on_intel_i7.py` without any modifications the
 following can be used to produce graphs for the benchmark:
