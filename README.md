@@ -92,8 +92,14 @@ Builds standard lock object files and benchmarks.
 
 `scons --use_pinning`
 
-Builds RWBench with thread pinning to hardware threads. The tests will
-not work when `--use_pinning` is specified.
+Builds RWBench with thread pinning to hardware threads. The tests for
+cohort lock (`test_cohort`), cohort based write-preference RW
+(`test_wprwcohort_rgnzi`) and hierarchical multi-reader QD
+(`test_rhqdlock_rgnzi`) should not be used when `--use_pinning` is
+enabled. The reason for this is that when pinning is enabled, the NUMA
+aware locks will rely on that the threads stay on the same node all
+the time, but pinning is not enabled in the tests. To test these locks,
+first compile without `--use_pinning`.
 
 `scons --use_queue_stats`
 
