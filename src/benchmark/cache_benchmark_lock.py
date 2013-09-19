@@ -20,9 +20,7 @@ parameters = sys.argv
 
 parameters.pop(0)
 
-iterations = int(parameters.pop(0))
-
-if len(parameters) < 10:
+if len(parameters) < 12:
     print """Not enough parameters:
 
 Look at bin/run_benchmarks_on_intel_i7.py and
@@ -31,6 +29,8 @@ parameters.
 
 """
     sys.exit()
+
+iterations = int(parameters.pop(0))
 
 output_dir_base = parameters.pop(0)
 
