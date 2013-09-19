@@ -152,10 +152,9 @@ paper and in the queue delegation locking paper. It measure the
 throughput of read and write critical sections performed by a number
 of threads. The benchmark is implemented in the file
 `src/datastructures_bench/rw_bench_clone.c`.  Note that the benchmark
-pin threads to hardware threads when the compile option
-`--use_pinning` has been specified and if the pinning does not work it
-might give unpredictable results, especially for the the NUMA-aware
-locks.
+pins threads to hardware threads when the compile option
+`--use_pinning` has been specified, and if the pinning does not work it
+might give unpredictable results, especially for the NUMA-aware locks.
 
 **How to run example:**
 
@@ -168,7 +167,7 @@ locks.
 Run `./bin/pairing_heap_bench_qdlock` for a description of the
 parameters.
 
-### Run benchmarks script ###
+### Run Benchmarks ###
 
 The script `bin/benchmark_lock.py` can be used to run the benchmark
 with different parameters. See the content of the file
@@ -183,7 +182,7 @@ The file `bin/benchmark_lock_XNonCW.py` is similar to
 where the x-axis shows the amount of thread-local work between the
 operations.
 
-### Produce benchmark graphs ###
+### Produce Benchmark Graphs ###
 
 The script `./bin/compare_benchmarks.py` can be used to produce
 graphs. For example if you have run
@@ -196,7 +195,4 @@ following can be used to produce graphs for the benchmark:
 This will produce a couple a graphs in PNG and PDF formats and a file
 called `gen_graphs.py` that can be changed to change the appearance of
 the graphs.
-
-
-    
 
