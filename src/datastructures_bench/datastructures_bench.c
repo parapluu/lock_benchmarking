@@ -142,6 +142,18 @@ void lock_init(){
 void lock_thread_init(){}
 
 
+#elif defined (USE_NEWREP_QDLOCK)
+
+#include "locks/locks.h"
+
+QDLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    LL_initialize(&lock);
+}
+
+void lock_thread_init(){}
+
 #elif defined (USE_QDLOCKP)
 
 #include "datastructures_bench/synch_algorithms/qdlockp.h"
@@ -384,6 +396,68 @@ void datastructure_thread_init(){}
 void datastructure_destroy(){
     destroy_heap(priority_queue.value);
 }
+
+#if defined (USE_NEWREP_QDLOCK)
+
+void enqueue_cs(unsigned int notUsed, void * messagePtr){
+    int * typedMessagePtr = (int *) messagePtr;
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+#ifdef DEBUG_PRINT_IN_CS
+    printf("ENQ CS %d\n", *typedMessagePtr);
+#endif
+   priority_queue.value = 
+      insert(priority_queue.value, *typedMessagePtr);    
+}
+
+void dequeue_cs(unsigned int notUsed, void * messagePtr){
+    int ** typedMessagePtr = (int **) messagePtr;
+    int * resultLocation = *typedMessagePtr;
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    if(priority_queue.value != NULL){
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", top(priority_queue.value));
+#endif
+        *resultLocation = top(priority_queue.value);
+        priority_queue.value = pop(priority_queue.value);
+    }else{
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
+        *resultLocation = -1;
+    }
+}
+
+static inline void enqueue(int value){
+    LL_delegate(&lock, &enqueue_cs, sizeof(int), &value);
+}
+
+static inline int dequeue(){
+    int counter = 0;
+    int returnValue = INT_MIN;
+    int * returnValuePtr = &returnValue;
+    int currentValue;
+    LL_delegate(&lock, &dequeue_cs, sizeof(int*), &returnValuePtr);
+    load_acq(currentValue, returnValue);
+    while(currentValue == INT_MIN){
+        if((counter & 7) == 0){
+#ifdef USE_YIELD
+            sched_yield();
+#endif
+        }else{
+            __sync_synchronize();
+        }
+        counter = counter + 1;
+        load_acq(currentValue, returnValue);
+    }
+    return currentValue;    
+}
+
+
+#endif
 
 #if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_HQDLOCK_NOSTARVE) || defined(USE_CPPLOCK)
 
@@ -724,7 +798,7 @@ static inline int dequeue(){
     return result;
 }
 
-#endif
+#endif //USE Pairing heap
 
 //###############
 //micro bench

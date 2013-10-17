@@ -75,6 +75,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
             return x;
         x = ACCESS_ONCE(*pointerToOldValue);
     }
+    return 1;
 }
 
 static inline
@@ -85,6 +86,7 @@ unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long
             return x;
         x = ACCESS_ONCE(*pointerToOldValue);
     }
+    return 1;
 }
 
 typedef union CacheLinePaddedBoolImpl {

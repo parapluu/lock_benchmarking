@@ -35,7 +35,8 @@ std_cxx_flags = ['-std=c++11',
 		 '-pthread']
 
 std_link_flags = ['-pthread',
-		  '-lrt']
+		  '-lrt',
+		  '-std=gnu11']
 
 debug_flags = ['-O1',
                '-g']
@@ -86,6 +87,7 @@ env = Environment(
                'src/utils',
                'src/benchmark/skiplist',
                'src/benchmark/pairingheap',
+               'src/new_rep',
                'src/datastructures_bench/PR'])
 
 
@@ -445,6 +447,8 @@ if not use_llvm:
 	locked_data_stuctures.extend(gcc_only_structures)
 
 benchmarked_locks = [
+    {'lock_defines': ['USE_NEWREP_QDLOCK'],
+     'lock_alias' : 'newqdlock'},
     {'lock_defines': ['USE_QDLOCK'],
      'lock_alias' : 'qdlock'},
     {'lock_defines': ['USE_QDLOCK_NOSTARVE'],
@@ -506,6 +510,8 @@ if use_queue_stats:
 
 for locked_data_stucture in locked_data_stuctures:
     for benchmarked_lock in benchmarked_locks:
+        if locked_data_stucture['data_structure_alias'] == 'micro_bench' and benchmarked_lock['lock_alias'] == 'newqdlock':
+            continue
         data_structure_define = locked_data_stucture['data_structure_define']
         data_structure_alias = locked_data_stucture['data_structure_alias']
         lock_defines = benchmarked_lock['lock_defines']
