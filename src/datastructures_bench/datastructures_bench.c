@@ -154,6 +154,18 @@ void lock_init(){
 
 void lock_thread_init(){}
 
+#elif defined (USE_OYAMA)
+
+#include "datastructures_bench/synch_algorithms/oyama.h"
+
+OyamaLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    oyamalock_initialize(&lock);
+}
+
+void lock_thread_init(){}
+
 
 #elif defined (USE_HQDLOCK)
 
@@ -299,7 +311,7 @@ void datastructure_destroy(){
     destroy_heap(priority_queue.value);
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -346,12 +358,16 @@ inline void enqueue(int value){
 #ifdef NO_PURE_DELEGATE
 #if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     adxlock_write_with_response_block(&lock, &enqueue_cs_write_back, value); 
+#elif defined (USE_OYAMA)
+    oyamalock_write_with_response_block(&lock, &enqueue_cs_write_back, value); 
 #else
     hqdlock_write_with_response_block(&lock, &enqueue_cs_write_back, value);
 #endif
 #else
 #if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
-    adxlock_delegate(&lock, &enqueue_cs, value); 
+    adxlock_delegate(&lock, &enqueue_cs, value);
+#elif defined (USE_OYAMA)
+    oyamalock_delegate(&lock, &enqueue_cs, value); 
 #else
     hqdlock_delegate(&lock, &enqueue_cs, value);
 #endif
@@ -360,6 +376,8 @@ inline void enqueue(int value){
 inline int dequeue(){
 #if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
+#elif defined (USE_OYAMA)
+    return oyamalock_write_with_response_block(&lock, &dequeue_cs, 0);
 #else
     return hqdlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #endif
@@ -477,7 +495,7 @@ inline void enqueue(int value){
     enqueues_executed.value++;
 #endif
 #ifdef DEBUG_PRINT_IN_CS
-    printf("ENQ CS %d\n", enqueueValue);
+    printf("ENQ CS %d\n", value);
 #endif
     priority_queue.value = 
         insert(priority_queue.value, value);
@@ -513,7 +531,7 @@ inline void enqueue(int value){
     enqueues_executed.value++;
 #endif
 #ifdef DEBUG_PRINT_IN_CS
-    printf("ENQ CS %d\n", enqueueValue);
+    printf("ENQ CS %d\n", value);
 #endif
     priority_queue.value = 
         insert(priority_queue.value, value);
@@ -582,7 +600,7 @@ inline void cs_work(){
     }
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -602,6 +620,8 @@ void dequeue_cs(int notUsed, int * resultLocation){
 inline void enqueue(int value){
 #if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     adxlock_delegate(&lock, &enqueue_cs, value);
+#elif defined (USE_OYAMA)
+    oyamalock_delegate(&lock, &enqueue_cs, value);
 #else
     hqdlock_delegate(&lock, &enqueue_cs, value);
 #endif
@@ -609,6 +629,8 @@ inline void enqueue(int value){
 inline int dequeue(){
 #if defined (USE_QDLOCK) || defined (USE_QDLOCKP)
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
+#elif defined (USE_OYAMA)
+    return oyamalock_write_with_response_block(&lock, &dequeue_cs, 0);
 #else
     return hqdlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #endif
