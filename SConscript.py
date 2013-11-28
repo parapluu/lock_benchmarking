@@ -443,6 +443,8 @@ benchmarked_locks = [
      'lock_alias' : 'qdlock'},
     {'lock_defines': ['USE_OYAMA'],
      'lock_alias' : 'oyama'},
+    {'lock_defines': ['USE_OYAMA', 'PRE_ALLOC_OPT'],
+     'lock_alias' : 'oyamaopt'},
     {'lock_defines': ['USE_HQDLOCK'],
      'lock_alias' : 'hqdlock'},
     {'lock_defines': ['USE_QDLOCK', 'PAD_QUEUE_ELEMENTS_TO_TWO_CACHE_LINES'],

@@ -164,7 +164,9 @@ void lock_init(){
     oyamalock_initialize(&lock);
 }
 
-void lock_thread_init(){}
+void lock_thread_init(){
+    oyamalock_register_this_thread();
+}
 
 
 #elif defined (USE_HQDLOCK)

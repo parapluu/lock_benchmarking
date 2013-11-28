@@ -1,6 +1,7 @@
 #ifndef QDLOCK_H
 #define QDLOCK_H
 
+#include <malloc.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -116,14 +117,21 @@ typedef union CacheLinePaddedPointerImpl {
 
 #endif
 
-
 //Oyama Lock
 
 typedef struct OyamaContextImpl {
+#ifdef PRE_ALLOC_OPT
+    bool free;
+#endif
     struct OyamaContextImpl * next;
     void (*delgateFun)(int, int *);
     int data;
     int * responseLocation;
+#ifdef PRE_ALLOC_OPT
+    char pad[64 - (3*sizeof(void*) + sizeof(int) + sizeof(bool))];
+#else
+    char pad[64 - (3*sizeof(void*) + sizeof(int))];
+#endif
 } OyamaContext;
 
 #define LOCK_IS_FREE_FLAG ((void*)((uintptr_t)1))
@@ -149,8 +157,64 @@ void oyamalock_free(OyamaLock * lock){
     free(lock);
 }
 
+#ifdef PRE_ALLOC_OPT
+
+__thread CacheLinePaddedInt currentOyamaContext  __attribute__((aligned(128)));
+
+__thread OyamaContext oyamaContexts[MAX_NUM_OF_HELPED_OPS] __attribute__((aligned(128)));
+
 void oyamalock_register_this_thread(){
+    currentOyamaContext.value = 0;
+    for(int i = 0; i < MAX_NUM_OF_HELPED_OPS; i++){
+        oyamaContexts[i].free = true;
+    }
 }
+
+#else
+void oyamalock_register_this_thread(){}
+#endif
+
+#ifdef PRE_ALLOC_OPT
+
+inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int data, int * responseLocation){
+    OyamaContext * context = &oyamaContexts[currentOyamaContext.value];
+    bool isFree;
+    load_acq(isFree, context->free);
+    while(!isFree){
+        sched_yield();
+        load_acq(isFree, context->free);
+    }
+    context->delgateFun = delgateFun;
+    context->data = data;
+    context->responseLocation = responseLocation;
+    store_rel(context->free, false);
+    currentOyamaContext.value = currentOyamaContext.value + 1;
+    if(currentOyamaContext.value == MAX_NUM_OF_HELPED_OPS){
+        currentOyamaContext.value = 0;
+    }
+    return context;
+}
+
+void oyama_free_context(OyamaContext * context){
+    store_rel(context->free, true);
+}
+
+#else
+
+inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int data, int * responseLocation){
+OyamaContext * context = memalign(64, (sizeof(OyamaContext)));
+    context->delgateFun = delgateFun;
+    context->data = data;
+    context->responseLocation = responseLocation;
+    return context;
+}
+
+void oyama_free_context(OyamaContext * context){
+    free(context);
+}
+
+#endif
+
 
 inline void oyama_release_lock(OyamaLock *lock){
     while(true){
@@ -176,17 +240,9 @@ inline void oyama_release_lock(OyamaLock *lock){
             currentContext->delgateFun(currentContext->data, currentContext->responseLocation);
             OyamaContext * oldCurrentContext = currentContext;
             currentContext = currentContext->next;
-            free(oldCurrentContext);
+            oyama_free_context(oldCurrentContext);
         }
     }
-}
-
-inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int data, int * responseLocation){
-    OyamaContext * context = malloc(sizeof(OyamaContext));
-    context->delgateFun = delgateFun;
-    context->data = data;
-    context->responseLocation = responseLocation;
-    return context;
 }
 
 inline bool oyama_insert(OyamaLock *lock, OyamaContext * context){
@@ -223,7 +279,7 @@ void oyamalock_write_with_response(OyamaLock *lock,
         OyamaContext * context = oyama_make_context(delgateFun, data, responseLocation);
         if(!oyama_insert(lock, context)){
             delgateFun(data, responseLocation);
-            free(context);
+            oyama_free_context(context);
             oyama_release_lock(lock);
         }
     }
