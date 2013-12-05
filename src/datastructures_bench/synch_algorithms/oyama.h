@@ -188,6 +188,7 @@ inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int dat
     context->data = data;
     context->responseLocation = responseLocation;
     store_rel(context->free, false);
+
     currentOyamaContext.value = currentOyamaContext.value + 1;
     if(currentOyamaContext.value == MAX_NUM_OF_HELPED_OPS){
         currentOyamaContext.value = 0;
@@ -238,6 +239,9 @@ inline void oyama_release_lock(OyamaLock *lock){
         currentContext = headContext;
         while(currentContext != NULL){
             currentContext->delgateFun(currentContext->data, currentContext->responseLocation);
+#ifdef QUEUE_STATS
+            numberOfDeques.value = numberOfDeques.value + 1;
+#endif
             OyamaContext * oldCurrentContext = currentContext;
             currentContext = currentContext->next;
             oyama_free_context(oldCurrentContext);
@@ -278,6 +282,9 @@ void oyamalock_write_with_response(OyamaLock *lock,
     } else {
         OyamaContext * context = oyama_make_context(delgateFun, data, responseLocation);
         if(!oyama_insert(lock, context)){
+#ifdef QUEUE_STATS
+            helpSeasonsPerformed.value = helpSeasonsPerformed.value + 1;
+#endif
             delgateFun(data, responseLocation);
             oyama_free_context(context);
             oyama_release_lock(lock);
