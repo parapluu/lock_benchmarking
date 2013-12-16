@@ -278,6 +278,9 @@ void oyamalock_write_with_response(OyamaLock *lock,
                                    int * responseLocation){
     if(__sync_bool_compare_and_swap(&lock->lockWord.value, LOCK_IS_FREE_FLAG, LOCK_IS_LOCKED_FLAG)){
         delgateFun(data, responseLocation);
+#ifdef QUEUE_STATS
+        helpSeasonsPerformed.value = helpSeasonsPerformed.value + 1;
+#endif
         oyama_release_lock(lock);
     } else {
         OyamaContext * context = oyama_make_context(delgateFun, data, responseLocation);
