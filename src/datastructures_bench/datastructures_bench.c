@@ -283,6 +283,16 @@ void lock_thread_init(){
     cohortlock_register_this_thread();
 }
 
+#elif defined (USE_PTHREADSLOCK)
+
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+void lock_init(){
+}
+
+void lock_thread_init(){
+}
+
 #endif
 //<<<<<<<<<<<<<<<<<<<<<<<
 // END Lock depended code
@@ -561,6 +571,42 @@ inline int dequeue(){
     return result;
 }
 
+#elif defined (USE_PTHREADSLOCK)
+
+inline void enqueue(int value){
+    pthread_mutex_lock(&lock);
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+#ifdef DEBUG_PRINT_IN_CS
+    printf("ENQ CS %d\n", value);
+#endif
+    priority_queue.value = 
+        insert(priority_queue.value, value);
+    pthread_mutex_unlock(&lock);
+}
+inline int dequeue(){
+    int result;
+    pthread_mutex_lock(&lock);
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    if(priority_queue.value != NULL){
+        result = top(priority_queue.value);
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", result);
+#endif
+        priority_queue.value = pop(priority_queue.value);
+    }else{
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
+        result = -1;
+    }
+    pthread_mutex_unlock(&lock);
+    return result;
+}
+
 
 #endif // lock spesific
 
@@ -746,6 +792,26 @@ inline int dequeue(){
 #endif
     cs_work();
     cohortlock_write_read_unlock(&lock);
+    return 1;
+}
+
+#elif defined (USE_PTHREADSLOCK)
+
+inline void enqueue(int value){
+    pthread_mutex_lock(&lock);
+#ifdef SANITY_CHECK
+    enqueues_executed.value++;
+#endif
+    cs_work();
+    pthread_mutex_unlock(&lock);
+}
+inline int dequeue(){
+    pthread_mutex_lock(&lock);
+#ifdef SANITY_CHECK
+    dequeues_executed.value++;
+#endif
+    cs_work();
+    pthread_mutex_unlock(&lock);
     return 1;
 }
 

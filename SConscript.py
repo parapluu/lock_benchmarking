@@ -477,6 +477,8 @@ benchmarked_locks = [
      'lock_alias' : 'clh'},
     {'lock_defines': ['USE_QDLOCKP'],
      'lock_alias' : 'qdlockp'},
+    {'lock_defines': ['USE_PTHREADSLOCK'],
+     'lock_alias' : 'pthreadslock'},
     {'lock_defines': ['USE_COHORTLOCK'],
      'lock_alias' : 'cohortlock'}] 
 
