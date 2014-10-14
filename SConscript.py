@@ -25,7 +25,8 @@ use_cas_fetch_and_add = GetOption('use_cas_fetch_and_add')
 std_cc_flags = ['-std=gnu99',
                 '-Wall',
 		'-fPIC',
-                '-pthread']
+                '-pthread',
+		'-lrt']
 std_cxx_flags = ['-std=c++11',
 		 '-Wall',
 		 '-Wextra',
@@ -33,7 +34,8 @@ std_cxx_flags = ['-std=c++11',
 		 '-fPIC',
 		 '-pthread']
 
-std_link_flags = ['-pthread']
+std_link_flags = ['-pthread',
+		  '-lrt']
 
 debug_flags = ['-O1',
                '-g']
