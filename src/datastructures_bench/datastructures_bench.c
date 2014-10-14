@@ -293,6 +293,14 @@ void lock_init(){
 void lock_thread_init(){
 }
 
+#elif defined (USE_JONATHAN_LOCKFREE)
+
+void lock_init(){
+}
+
+void lock_thread_init(){
+}
+
 #endif
 //<<<<<<<<<<<<<<<<<<<<<<<
 // END Lock depended code
@@ -607,10 +615,60 @@ inline int dequeue(){
     return result;
 }
 
-
 #endif // lock spesific
 
-#endif //USE Pairing heap
+#elif defined (USE_JONATHAN_LOCKFREE) //USE Pairing heap
+
+#include "datastructures_bench/PR/prioq.h"
+typedef struct {
+char pad1[FALSE_SHARING_SECURITY];
+pq_t * priority_queue;
+char pad2[FALSE_SHARING_SECURITY];
+} PaddedPqT;
+
+PaddedPqT padded_priority_queue __attribute__((aligned(64)));
+
+void datastructure_init(){
+    _init_gc_subsystem();
+    padded_priority_queue.priority_queue = pq_init(128);
+    insertq(padded_priority_queue.priority_queue, 4, (void *)(long)4);
+    deletemin(padded_priority_queue.priority_queue);
+}
+
+void datastructure_thread_init(){}
+
+void datastructure_destroy(){
+    pq_destroy(padded_priority_queue.priority_queue);
+    _destroy_gc_subsystem();
+}
+
+
+inline void enqueue(int value){
+
+#ifdef DEBUG_PRINT_IN_CS
+    printf("ENQ CS %d\n", value);
+#endif
+    insertq(padded_priority_queue.priority_queue, value, (void *)(long)value);
+
+}
+inline int dequeue(){
+    int result;
+    void * resultPtr = deletemin(padded_priority_queue.priority_queue);
+    if(resultPtr != NULL){
+        result = (int)(long)resultPtr;
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", result);
+#endif
+    }else{
+#ifdef DEBUG_PRINT_IN_CS
+        printf("DEQ CS %d\n", -1);
+#endif
+        result = -1;
+    }
+    return result;
+}
+
+#endif
 
 //###############
 //micro bench

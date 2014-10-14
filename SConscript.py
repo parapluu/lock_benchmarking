@@ -80,7 +80,8 @@ env = Environment(
                'src/tests',
                'src/utils',
                'src/benchmark/skiplist',
-               'src/benchmark/pairingheap'])
+               'src/benchmark/pairingheap',
+               'src/datastructures_bench/PR'])
 
 
 pinning_def = 'NO_PINNING'
@@ -498,15 +499,31 @@ for locked_data_stucture in locked_data_stuctures:
         lock_alias = benchmarked_lock['lock_alias']
         object = env.Object(
             target = (data_structure_alias + '_' + lock_alias + '.o'),
-            source = ['src/datastructures_bench/datastructures_bench.c'],
-            CPPDEFINES = ([data_structure_define,
+                source = ['src/datastructures_bench/datastructures_bench.c'],
+                CPPDEFINES = ([data_structure_define,
 			   print_thread_queue_stats_define,
 			   queue_stats_define] + 
 			  lock_defines + 
 			  numa_structure_defines()))
         env.Program(
-            target = (data_structure_alias + '_' + lock_alias),
-            source = [object])
+                target = (data_structure_alias + '_' + lock_alias),
+                source = [object])
+
+
+jonathan_lf_object = env.Object(
+        target = ('pairing_heap_bench_lf.o'),
+        source = ['src/datastructures_bench/datastructures_bench.c'],
+        CPPDEFINES = (['USE_JONATHAN_LOCKFREE',
+                       print_thread_queue_stats_define,
+                       queue_stats_define] + 
+                      numa_structure_defines()))
+
+env.Program(
+        target = ('pairing_heap_bench_lf'),
+        source = ['src/datastructures_bench/PR/prioq.c',
+                  'src/datastructures_bench/PR/common.c',
+                  'src/datastructures_bench/PR/gc/gc.c',
+                  'src/datastructures_bench/PR/gc/ptst.c',jonathan_lf_object])
 
 if not use_llvm:
 	fetch_and_add_bench_object = env.Object(
