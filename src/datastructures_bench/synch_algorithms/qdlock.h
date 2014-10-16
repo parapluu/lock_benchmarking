@@ -190,6 +190,7 @@ bool tataslock_is_locked(TATASLock *lock){
 
 inline
 bool tataslock_try_write_read_lock(TATASLock *lock) {
+    //return __sync_bool_compare_and_swap(&lock->lockWord.value, false, true);
     return !__sync_lock_test_and_set(&lock->lockWord.value, true);
 }
 

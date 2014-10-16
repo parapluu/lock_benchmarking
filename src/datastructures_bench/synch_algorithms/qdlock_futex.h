@@ -123,7 +123,7 @@ typedef union CacheLinePaddedPointerImpl {
 //Futex Lock
 /* tuning parameter */
 #define MAGIC_NUMBER_WAIT_IN_TRYLOCK 128
-#define MAGIC_NUMBER_ENQUEUE_TRIES 32
+#define MAGIC_NUMBER_ENQUEUE_TRIES 16
 
 /* constants for states */
 #define MAGIC_FREE 0
@@ -188,7 +188,9 @@ inline
 bool flock_is_locked(void * lock){
     FutexLock *l = (FutexLock*)lock;
     //return atomic_load_explicit(&l->lockWord.value, memory_order_acquire) != MAGIC_FREE;
-    return ACCESS_ONCE(l->lockWord.value) != MAGIC_FREE;
+    int val;
+    load_acq(val, l->lockWord.value);
+    return val != MAGIC_FREE;
 }
 
 bool flock_try_lock(void * lock) {
@@ -550,7 +552,8 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
             if(drmvqueue_offer(&lock->writeQueue, e)){
                 return;
             }
-                asm("pause");
+                __sync_synchronize();
+                __sync_synchronize();
         }
     }
     /* TODO: if starvation freedom is desired, insert code here */

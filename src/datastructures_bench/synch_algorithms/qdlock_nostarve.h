@@ -153,12 +153,8 @@ bool set_if_null_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue){
 inline
 bool mcslock_try_write_read_lock(MCSLock *lock) {
     MCSNode * node = &myMCSNode;
-    if(ACCESS_ONCE(lock->endOfQueue.value) != NULL){
-        return false;
-    }else{
-        node->next.value = NULL;
-        return set_if_null_ptr(&lock->endOfQueue.value, node);
-    }
+    node->next.value = NULL;
+    return set_if_null_ptr(&lock->endOfQueue.value, node);
 }
 
 __thread MCSNode myMCSNode __attribute__((aligned(64)));
@@ -537,7 +533,7 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
 #endif
         }
         counter = counter + 1;
-    }while(counter < 128);
+    }while(counter < 32);
     /* limit reached: force locking */
     adxlock_write_read_lock(lock);
 
