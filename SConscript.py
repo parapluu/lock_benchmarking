@@ -444,6 +444,8 @@ if not use_llvm:
 benchmarked_locks = [
     {'lock_defines': ['USE_QDLOCK'],
      'lock_alias' : 'qdlock'},
+    {'lock_defines': ['USE_QDLOCK_NOSTARVE'],
+     'lock_alias' : 'qdlock_nostarve'},
     {'lock_defines': ['USE_OYAMA'],
      'lock_alias' : 'oyama'},
     {'lock_defines': ['USE_OYAMA', 'PRE_ALLOC_OPT'],
