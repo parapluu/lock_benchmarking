@@ -166,6 +166,18 @@ void lock_init(){
 
 void lock_thread_init(){}
 
+#elif defined (USE_QDLOCK_FUTEX)
+
+#include "datastructures_bench/synch_algorithms/qdlock_futex.h"
+
+AgnosticDXLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    adxlock_initialize(&lock, NULL);
+}
+
+void lock_thread_init(){}
+
 #elif defined (USE_OYAMA)
 
 #include "datastructures_bench/synch_algorithms/oyama.h"
@@ -343,7 +355,7 @@ void datastructure_destroy(){
     destroy_heap(priority_queue.value);
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -388,7 +400,7 @@ void dequeue_cs(int notUsed, int * resultLocation){
 
 inline void enqueue(int value){
 #ifdef NO_PURE_DELEGATE
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
     adxlock_write_with_response_block(&lock, &enqueue_cs_write_back, value); 
 #elif defined (USE_OYAMA)
     oyamalock_write_with_response_block(&lock, &enqueue_cs_write_back, value); 
@@ -396,7 +408,7 @@ inline void enqueue(int value){
     hqdlock_write_with_response_block(&lock, &enqueue_cs_write_back, value);
 #endif
 #else
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
     adxlock_delegate(&lock, &enqueue_cs, value);
 #elif defined (USE_OYAMA)
     oyamalock_delegate(&lock, &enqueue_cs, value); 
@@ -406,7 +418,7 @@ inline void enqueue(int value){
 #endif
 }
 inline int dequeue(){
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #elif defined (USE_OYAMA)
     return oyamalock_write_with_response_block(&lock, &dequeue_cs, 0);
@@ -718,7 +730,7 @@ inline void cs_work(){
     }
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -736,7 +748,7 @@ void dequeue_cs(int notUsed, int * resultLocation){
 }
 
 inline void enqueue(int value){
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
     adxlock_delegate(&lock, &enqueue_cs, value);
 #elif defined (USE_OYAMA)
     oyamalock_delegate(&lock, &enqueue_cs, value);
@@ -745,7 +757,7 @@ inline void enqueue(int value){
 #endif
 }
 inline int dequeue(){
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #elif defined (USE_OYAMA)
     return oyamalock_write_with_response_block(&lock, &dequeue_cs, 0);
