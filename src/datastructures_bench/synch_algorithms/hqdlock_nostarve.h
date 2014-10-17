@@ -1,6 +1,5 @@
-
-#ifndef QDLOCK_NOSTARVE_H
-#define QDLOCK_NOSTARVE_H
+#ifndef HQDLOCK_NOSTARVE_H
+#define HQDLOCK_NOSTARVE_H
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -247,7 +246,6 @@ void mcslock_write(MCSLock *lock, int writeInfo) {
     
 }
 
-
 //Multi write queue
 
 #define MWQ_CAPACITY MAX_NUM_OF_HELPED_OPS
@@ -279,9 +277,9 @@ void drmvqueue_reset_fully_read(DRMWQueue *  queue);
 
 
 inline 
-int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith){
-    int oldValCAS;
-    int oldVal = ACCESS_ONCE(*valueAddress);
+int CAS_fetch_and_add(unsigned long * valueAddress, int incrementWith){
+    unsigned long oldValCAS;
+    unsigned long oldVal = ACCESS_ONCE(*valueAddress);
     while(true){
         oldValCAS = __sync_val_compare_and_swap(valueAddress, oldVal, oldVal + incrementWith);
         if(oldVal == oldValCAS){
@@ -484,15 +482,57 @@ void adxlock_free(AgnosticDXLock * lock){
     free(lock);
 }
 
-void adxlock_register_this_thread(){
+
+//*******
+//hqdlock
+//*******
+#include "synch_algs_config.h"
+#include "synch_algs_primitives.h"
+
+#include "clh.h"
+
+typedef struct HQDLockImpl {
+    char pad1[64];
+    AgnosticDXLock qdlocks[NUMBER_OF_NUMA_NODES];
+    char pad2[64];
+    CLHLockStruct lock;
+    char pad3[128];
+} HQDLock;
+
+void hqdlock_initialize(HQDLock * lock, void (*defaultWriter)(int, int *));
+HQDLock * hqdlock_create(void (*writer)(int, int *)){
+    HQDLock * lock = (HQDLock *)malloc(sizeof(HQDLock));
+    hqdlock_initialize(lock, writer);
+    return lock;
 }
 
-void adxlock_write_read_lock(AgnosticDXLock *lock);
+void hqdlock_initialize(HQDLock * lock, void (*defaultWriter)(int, int *)){
+    for(int n = 0; n < NUMBER_OF_NUMA_NODES; n++){
+        adxlock_initialize(&lock->qdlocks[n], NULL);
+    }
+    clhLockInitExisting(&lock->lock);
+}
+
+void hqdlock_free(HQDLock * lock){
+    free(lock);
+}
+
+void hqdlock_register_this_thread(){
+    clhThreadLocalInit();
+}
+
 inline
-void adxlock_write_with_response(AgnosticDXLock *lock, 
+void hqdlock_write_with_response(HQDLock *hqdlock, 
                                  void (*delgateFun)(int, int *), 
                                  int data, 
                                  int * responseLocation){
+#ifdef PINNING
+    int my_numa_node = numa_node.value;
+#else
+    int my_numa_node = sched_getcpu() % NUMBER_OF_NUMA_NODES;
+#endif
+    AgnosticDXLock * lock = &hqdlock->qdlocks[my_numa_node];
+
     int counter = 0;
     DelegateRequestEntry e;
     e.request = delgateFun;
@@ -501,19 +541,24 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
     do{
         if(!mcslock_is_locked(&lock->lock)){
             if(mcslock_try_write_read_lock(&lock->lock)){
+                clhLock(&hqdlock->lock, 0 /*NOT USED*/);
 #ifdef ACTIVATE_NO_CONTENTION_OPT
 	        if(counter > 0){
 #endif
                     drmvqueue_reset_fully_read(&lock->writeQueue);
                     delgateFun(data, responseLocation);
                     drmvqueue_flush(&lock->writeQueue);
+                    clhUnlock(&hqdlock->lock, 0 /*NOT USED*/);
                     mcslock_write_read_unlock(&lock->lock);
                     return;
 #ifdef ACTIVATE_NO_CONTENTION_OPT
-	        }else{
+                }else{
                     delgateFun(data, responseLocation);
+#endif
+                    clhUnlock(&hqdlock->lock, 0 /*NOT USED*/);
 		    mcslock_write_read_unlock(&lock->lock);
 		    return;
+#ifdef ACTIVATE_NO_CONTENTION_OPT
                 }
 #endif
             }
@@ -540,18 +585,16 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
     delgateFun(data, responseLocation);
     drmvqueue_flush(&lock->writeQueue);
     mcslock_write_read_unlock(&lock->lock);
-
-
 }
 
 inline
-int adxlock_write_with_response_block(AgnosticDXLock *lock, 
+int hqdlock_write_with_response_block(HQDLock *lock, 
                                       void (*delgateFun)(int, int *), 
                                       int data){
     int counter = 0;
     int returnValue = INT_MIN;
     int currentValue;
-    adxlock_write_with_response(lock, delgateFun, data, &returnValue);
+    hqdlock_write_with_response(lock, delgateFun, data, &returnValue);
     load_acq(currentValue, returnValue);
     while(currentValue == INT_MIN){
         if((counter & 7) == 0){
@@ -568,35 +611,30 @@ int adxlock_write_with_response_block(AgnosticDXLock *lock,
 }
 
 inline
-void adxlock_delegate(AgnosticDXLock *lock, 
+void hqdlock_delegate(HQDLock *lock, 
                       void (*delgateFun)(int, int *), 
                       int data) {
-    adxlock_write_with_response(lock, delgateFun, data, NULL);
+    hqdlock_write_with_response(lock, delgateFun, data, NULL);
 }
 
-void adxlock_write(AgnosticDXLock *lock, int writeInfo) {
-    adxlock_delegate(lock, lock->defaultWriter, writeInfo);
+void hqdlock_write(HQDLock *lock, int writeInfo) {
+    hqdlock_delegate(lock, lock->qdlocks[0].defaultWriter, writeInfo);
 }
 
-void adxlock_write_read_lock(AgnosticDXLock *lock) {
-    mcslock_write_read_lock(&lock->lock);    
-    drmvqueue_reset_fully_read(&lock->writeQueue);
-    __sync_synchronize();//Flush
+void hqdlock_write_read_lock(HQDLock *lock) {
+    clhLock(&lock->lock, 0 /*NOT USED*/);
 }
 
-void adxlock_write_read_unlock(AgnosticDXLock * lock) {
-    drmvqueue_flush(&lock->writeQueue);
-    mcslock_write_read_unlock(&lock->lock);
+void hqdlock_write_read_unlock(HQDLock * lock) {
+    clhUnlock(&lock->lock, 0 /*NOT USED*/);
 }
 
-void adxlock_read_lock(AgnosticDXLock *lock) {
-    adxlock_write_read_lock(lock);
+void hqdlock_read_lock(HQDLock *lock) {
+    hqdlock_write_read_lock(lock);
 }
 
-void adxlock_read_unlock(AgnosticDXLock *lock) {
-    adxlock_write_read_unlock(lock);
+void hqdlock_read_unlock(HQDLock *lock) {
+    hqdlock_write_read_unlock(lock);
 }
-
-
 
 #endif

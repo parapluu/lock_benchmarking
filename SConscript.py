@@ -454,6 +454,8 @@ benchmarked_locks = [
      'lock_alias' : 'oyamaopt'},
     {'lock_defines': ['USE_HQDLOCK'],
      'lock_alias' : 'hqdlock'},
+    {'lock_defines': ['USE_HQDLOCK_NOSTARVE'],
+    'lock_alias' : 'hqdlock_nostarve'},
     {'lock_defines': ['USE_QDLOCK', 'PAD_QUEUE_ELEMENTS_TO_TWO_CACHE_LINES'],
      'lock_alias' : 'padqdlock'},
     {'lock_defines': ['USE_HQDLOCK', 'PAD_QUEUE_ELEMENTS_TO_TWO_CACHE_LINES'],

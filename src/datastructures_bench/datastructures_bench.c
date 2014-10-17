@@ -211,6 +211,24 @@ void lock_thread_init(){
     clhThreadLocalInit();
 }
 
+#elif defined (USE_HQDLOCK_NOSTARVE)
+
+//#define WAITS_BEFORE_CLOSE_QUEUE_ATTEMPT 1
+//#define ACTIVATE_NO_CONTENTION_OPT
+//#define CAS_FETCH_AND_ADD
+
+#include "datastructures_bench/synch_algorithms/hqdlock_nostarve.h"
+
+HQDLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    hqdlock_initialize(&lock, NULL);
+}
+
+void lock_thread_init(){
+    clhThreadLocalInit();
+}
+
 #elif defined (USE_HSYNCH)
 
 void enqueue_cs(int enqueueValue);
@@ -355,7 +373,7 @@ void datastructure_destroy(){
     destroy_heap(priority_queue.value);
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_HQDLOCK_NOSTARVE)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -730,7 +748,7 @@ inline void cs_work(){
     }
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_HQDLOCK_NOSTARVE)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
