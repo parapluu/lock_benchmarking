@@ -11,7 +11,7 @@
 __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
 
 
-inline
+static inline
 bool nodeHasWaitingThreads(TicketLock * localLock){
     int localLockInCounter;
     int localLockOutCounter;

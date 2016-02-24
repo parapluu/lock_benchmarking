@@ -37,7 +37,7 @@ void mcslock_write_read_unlock(MCSLock * lock);
 void mcslock_read_lock(MCSLock *lock);
 void mcslock_read_unlock(MCSLock *lock);
 
-inline
+static inline
 bool mcslock_is_locked(MCSLock *lock){
     MCSNode * endOfQueue;
     load_acq(endOfQueue, lock->endOfQueue.value);
@@ -46,12 +46,12 @@ bool mcslock_is_locked(MCSLock *lock){
 
 extern __thread MCSNode myMCSNode __attribute__((aligned(64)));
 
-inline
+static inline
 bool set_if_null_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue){
     return __sync_bool_compare_and_swap(pointerToOldValue, NULL, newValue);
 }
 
-inline
+static inline
 bool mcslock_try_write_read_lock(MCSLock *lock) {
     MCSNode * node = &myMCSNode;
     if(ACCESS_ONCE(lock->endOfQueue.value) != NULL){

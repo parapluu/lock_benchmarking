@@ -11,14 +11,14 @@ FlatCombNode statically_allocated_fc_nodes[STATICALLY_ALLOCATED_FLAT_COMB_NODES]
 __thread CacheLinePaddedFlatCombNodePtr myFCNode __attribute__((aligned(64)));
 __thread FCMCSNode myFCMCSNode __attribute__((aligned(64)));
 
-inline
+static inline
 bool isWriteLocked(FlatCombRDXLock * lock){
     FCMCSNode * endOfMCSQueue;
     load_acq(endOfMCSQueue, lock->endOfMCSQueue.value);
     return endOfMCSQueue != NULL;
 }
 
-inline
+static inline
 FCMCSNode * get_and_set_node_ptr(FCMCSNode ** pointerToOldValue, FCMCSNode * newValue){
     FCMCSNode * x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -28,7 +28,7 @@ FCMCSNode * get_and_set_node_ptr(FCMCSNode ** pointerToOldValue, FCMCSNode * new
     }
 }
 
-inline
+static inline
 bool try_set_node_ptr(FCMCSNode ** pointerToOldValue, FCMCSNode * newValue){
     if (__sync_bool_compare_and_swap(pointerToOldValue, NULL, newValue)){
         return true;
@@ -75,7 +75,7 @@ void fcrdxlock_register_this_thread(){
     __sync_synchronize();        
 }
 
-inline
+static inline
 void activateFCNode(FlatCombRDXLock *lock, FlatCombNode * fcNode){
     fcNode->active.value = true;
     FlatCombNode ** pointerToOldValue = &lock->combine_list.value;
@@ -128,7 +128,7 @@ void combine_requests(FlatCombRDXLock *lock){
     }
 }
 
-inline
+static inline
 bool try_write_read_lock(FlatCombRDXLock *lock) {
     bool writeBarrierOn;
     load_acq(writeBarrierOn, lock->writeBarrier.value);

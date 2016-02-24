@@ -72,7 +72,7 @@
   __sync_synchronize()
 #endif
 
-inline
+static inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
     int x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -82,7 +82,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-inline
+static inline
 unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
     unsigned long x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -137,15 +137,15 @@ typedef struct FutexLockImpl {
     CacheLinePaddedInt lockWord;
 } FutexLock;
 
-inline long sys_futex(void *addr1, int op, int val1, struct timespec *timeout, void *addr2, int val3) {
+static inline long sys_futex(void *addr1, int op, int val1, struct timespec *timeout, void *addr2, int val3) {
     return syscall(SYS_futex, addr1, op, val1, timeout, addr2, val3);
 }
 
-inline void flock_notify_all(FutexLock* lock) {
+static inline void flock_notify_all(FutexLock* lock) {
     sys_futex((void*)&lock->lockWord.value, FUTEX_WAKE, 65000, NULL, NULL, 0);
 }
 
-inline bool flock_wait(FutexLock* lock) {
+static inline bool flock_wait(FutexLock* lock) {
     //if(atomic_load_explicit(&lock->lockWord.value, memory_order_acquire) != MAGIC_CONTENDED) {
     if(ACCESS_ONCE(lock->lockWord.value) != MAGIC_CONTENDED) {
         //int c = atomic_exchange_explicit(&lock->lockWord.value, MAGIC_CONTENDED, memory_order_release);
@@ -175,7 +175,7 @@ void flock_lock(void * lock) {
         }
    }
 }
-inline
+static inline
 void flock_unlock(void * lock) {
     FutexLock *l = (FutexLock*)lock;
     //int old = atomic_exchange_explicit(&l->lockWord.value, MAGIC_FREE, memory_order_release);
@@ -184,7 +184,7 @@ void flock_unlock(void * lock) {
         flock_notify_all(l); /* TODO: notify how many? only one? */
     }
 }
-inline
+static inline
 bool flock_is_locked(void * lock){
     FutexLock *l = (FutexLock*)lock;
     //return atomic_load_explicit(&l->lockWord.value, memory_order_acquire) != MAGIC_FREE;
@@ -210,7 +210,7 @@ bool flock_try_lock(void * lock) {
 }
 
 /* TODO: can the tries parameter replaced with a PRNG call? */
-inline
+static inline
 bool flock_try_lock_wait(void * lock, unsigned int tries) {
     FutexLock *l = (FutexLock*)lock;
     int c = MAGIC_FREE;
@@ -248,9 +248,9 @@ void futexlock_free(FutexLock * lock){
 void futexlock_register_this_thread(){
 }
 
-inline
+static inline
 void futexlock_write_read_lock(FutexLock *lock);
-inline
+static inline
 void futexlock_write_read_unlock(FutexLock * lock);
 void futexlock_write(FutexLock *lock, int writeInfo) {
     futexlock_write_read_lock(lock);
@@ -262,7 +262,7 @@ void futexlock_write_read_lock(FutexLock *lock) {
     flock_lock(lock);
 }
 
-inline
+static inline
 void futexlock_write_read_unlock(FutexLock * lock) {
     flock_unlock(lock);
 }
@@ -276,12 +276,12 @@ void futexlock_read_unlock(FutexLock *lock) {
 }
 
 
-inline
+static inline
 bool futexlock_is_locked(FutexLock *lock){
     return flock_is_locked(lock);
 }
 
-inline
+static inline
 bool futexlock_try_write_read_lock(FutexLock *lock) {
     return flock_try_lock_wait(lock, 0); //TODO 0 == retries
 }
@@ -310,13 +310,13 @@ typedef struct DRMWQImpl {
 
 DRMWQueue * drmvqueue_create();
 DRMWQueue * drmvqueue_initialize(DRMWQueue * queue);
-void drmvqueue_free(DRMWQueue * queue);
-bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e);
-void drmvqueue_flush(DRMWQueue * queue);
-void drmvqueue_reset_fully_read(DRMWQueue *  queue);
+static void drmvqueue_free(DRMWQueue * queue);
+static bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e);
+static void drmvqueue_flush(DRMWQueue * queue);
+static void drmvqueue_reset_fully_read(DRMWQueue *  queue);
 
 
-inline 
+static inline
 int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith){
     int oldValCAS;
     int oldVal = ACCESS_ONCE(*valueAddress);
@@ -336,7 +336,7 @@ int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith)
 #define FETCH_AND_ADD(valueAddress, incrementWith) __sync_fetch_and_add(valueAddress, incrementWith) 
 #endif 
 
-inline
+static inline
 unsigned long min(unsigned long i1, unsigned long i2){
     return i1 < i2 ? i1 : i2;
 }
@@ -365,7 +365,7 @@ void drmvqueue_free(DRMWQueue * queue){
 #define NEWOFFER
 #ifdef NEWOFFER
 
-inline
+static inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
@@ -387,7 +387,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
 
 #else
 
-inline
+static inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
@@ -412,7 +412,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
 #endif
 
 
-inline
+static inline
 void drmvqueue_flush(DRMWQueue * queue){
     unsigned long numOfElementsToRead;
     unsigned long newNumOfElementsToRead;
@@ -482,7 +482,7 @@ void drmvqueue_flush(DRMWQueue * queue){
     }
 }
 
-inline
+static inline
 void drmvqueue_reset_fully_read(DRMWQueue * queue){
     store_rel(queue->elementCount.value, 0);
     store_rel(queue->closed.value, false);
@@ -525,7 +525,7 @@ void adxlock_free(AgnosticDXLock * lock){
 void adxlock_register_this_thread(){
 }
 
-inline
+static inline
 void adxlock_write_with_response(AgnosticDXLock *lock, 
                                  void (*delgateFun)(int, int *), 
                                  int data, 
@@ -603,7 +603,7 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
 #endif
 }
 
-inline
+static inline
 int adxlock_write_with_response_block(AgnosticDXLock *lock, 
                                       void (*delgateFun)(int, int *), 
                                       int data){
@@ -626,7 +626,7 @@ int adxlock_write_with_response_block(AgnosticDXLock *lock,
     return currentValue;
 }
 
-inline
+static inline
 void adxlock_delegate(AgnosticDXLock *lock, 
                       void (*delgateFun)(int, int *), 
                       int data) {

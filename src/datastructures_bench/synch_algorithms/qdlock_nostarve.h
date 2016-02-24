@@ -68,7 +68,7 @@
   __sync_synchronize()
 #endif
 
-inline
+static inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
     int x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -78,7 +78,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-inline
+static inline
 unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
     unsigned long x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -136,7 +136,7 @@ typedef struct MCSLockImpl {
     char pad2[64 - sizeof(void (*)(void*)) % 64];
     CacheLinePaddedMCSNodePtr endOfQueue;
 } MCSLock;
-inline
+static inline
 bool mcslock_is_locked(MCSLock *lock){
     MCSNode * endOfQueue;
     load_acq(endOfQueue, lock->endOfQueue.value);
@@ -145,12 +145,12 @@ bool mcslock_is_locked(MCSLock *lock){
 
 extern __thread MCSNode myMCSNode __attribute__((aligned(64)));
 
-inline
+static inline
 bool set_if_null_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue){
     return __sync_bool_compare_and_swap(pointerToOldValue, NULL, newValue);
 }
 
-inline
+static inline
 bool mcslock_try_write_read_lock(MCSLock *lock) {
     MCSNode * node = &myMCSNode;
     node->next.value = NULL;
@@ -159,7 +159,7 @@ bool mcslock_try_write_read_lock(MCSLock *lock) {
 
 __thread MCSNode myMCSNode __attribute__((aligned(64)));
 
-inline
+static inline
 MCSNode * get_and_set_node_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue){
     MCSNode * x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -192,7 +192,7 @@ void mcslock_register_this_thread(){
 }
 
 //Returns true if it is taken over from another writer and false otherwise
-inline bool mcslock_write_read_lock(MCSLock *lock) {
+static inline bool mcslock_write_read_lock(MCSLock *lock) {
     bool isNodeLocked;
     MCSNode * node = &myMCSNode;
     node->next.value = NULL;
@@ -212,7 +212,7 @@ inline bool mcslock_write_read_lock(MCSLock *lock) {
     }
 }
 
-inline
+static inline
 void mcslock_write_read_unlock(MCSLock * lock) {
     MCSNode * nextNode;
     MCSNode * node = &myMCSNode;
@@ -236,7 +236,7 @@ void mcslock_read_lock(MCSLock *lock) {
     mcslock_write_read_lock(lock);
 }
 
-inline
+static inline
 void mcslock_read_unlock(MCSLock *lock) {
     mcslock_write_read_unlock(lock);
 }
@@ -272,13 +272,13 @@ typedef struct DRMWQImpl {
 
 DRMWQueue * drmvqueue_create();
 DRMWQueue * drmvqueue_initialize(DRMWQueue * queue);
-void drmvqueue_free(DRMWQueue * queue);
-bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e);
-void drmvqueue_flush(DRMWQueue * queue);
-void drmvqueue_reset_fully_read(DRMWQueue *  queue);
+static void drmvqueue_free(DRMWQueue * queue);
+static bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e);
+static void drmvqueue_flush(DRMWQueue * queue);
+static void drmvqueue_reset_fully_read(DRMWQueue *  queue);
 
 
-inline 
+static inline
 int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith){
     int oldValCAS;
     int oldVal = ACCESS_ONCE(*valueAddress);
@@ -298,7 +298,7 @@ int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith)
 #define FETCH_AND_ADD(valueAddress, incrementWith) __sync_fetch_and_add(valueAddress, incrementWith) 
 #endif 
 
-inline
+static inline
 unsigned long min(unsigned long i1, unsigned long i2){
     return i1 < i2 ? i1 : i2;
 }
@@ -327,7 +327,7 @@ void drmvqueue_free(DRMWQueue * queue){
 #define NEWOFFER
 #ifdef NEWOFFER
 
-inline
+static inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
@@ -349,7 +349,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
 
 #else
 
-inline
+static inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
@@ -374,7 +374,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
 #endif
 
 
-inline
+static inline
 void drmvqueue_flush(DRMWQueue * queue){
     unsigned long numOfElementsToRead;
     unsigned long newNumOfElementsToRead;
@@ -444,7 +444,7 @@ void drmvqueue_flush(DRMWQueue * queue){
     }
 }
 
-inline
+static inline
 void drmvqueue_reset_fully_read(DRMWQueue * queue){
     store_rel(queue->elementCount.value, 0);
     store_rel(queue->closed.value, false);
@@ -488,7 +488,7 @@ void adxlock_register_this_thread(){
 }
 
 void adxlock_write_read_lock(AgnosticDXLock *lock);
-inline
+static inline
 void adxlock_write_with_response(AgnosticDXLock *lock, 
                                  void (*delgateFun)(int, int *), 
                                  int data, 
@@ -544,7 +544,7 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
 
 }
 
-inline
+static inline
 int adxlock_write_with_response_block(AgnosticDXLock *lock, 
                                       void (*delgateFun)(int, int *), 
                                       int data){
@@ -567,7 +567,7 @@ int adxlock_write_with_response_block(AgnosticDXLock *lock,
     return currentValue;
 }
 
-inline
+static inline
 void adxlock_delegate(AgnosticDXLock *lock, 
                       void (*delgateFun)(int, int *), 
                       int data) {

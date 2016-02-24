@@ -36,7 +36,7 @@ void cohortlock_write_read_unlock(CohortLock * lock);
 void cohortlock_read_lock(CohortLock *lock);
 void cohortlock_read_unlock(CohortLock *lock);
 
-inline
+static inline
 bool cohortlock_is_locked(CohortLock *lock){
     int inCounter;
     int outCounter;
@@ -51,7 +51,7 @@ extern __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
 extern __thread CacheLinePaddedInt numa_node;
 #endif
 
-inline
+static inline
 bool cohortlock_is_local_locked(CohortLock *lock){
     int inCounter;
     int outCounter;
@@ -65,7 +65,7 @@ bool cohortlock_is_local_locked(CohortLock *lock){
     return (inCounter != outCounter);
 }
 
-inline
+static inline
 bool cohortlock_try_write_read_lock(CohortLock *lock) {
     if(!cohortlock_is_locked(lock) && 
        !cohortlock_is_local_locked(lock)){

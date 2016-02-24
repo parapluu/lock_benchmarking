@@ -84,12 +84,29 @@ void afdxlock_write_with_response(AgnosticFDXLock *lock,
 void * afdxlock_write_with_response_block(AgnosticFDXLock *lock, 
                                           void (*delgateFun)(void *, void **), 
                                           void * data);
-void afdxlock_delegate(AgnosticFDXLock *lock, 
+static void afdxlock_delegate(AgnosticFDXLock *lock, 
                        void (*delgateFun)(void *, void **), 
                        void * data);
 void afdxlock_write_read_lock(AgnosticFDXLock *lock);
 void afdxlock_write_read_unlock(AgnosticFDXLock * lock);
 void afdxlock_read_lock(AgnosticFDXLock *lock);
 void afdxlock_read_unlock(AgnosticFDXLock *lock);
+
+static inline
+    void afdxlock_delegate(AgnosticFDXLock *lock, void (*delgateFun)(void *, void **), void * data) {
+    afdxlock_write_with_response(lock, delgateFun, data, NULL);
+}
+static inline
+void activateFCNode(AgnosticFDXLock *lock, FlatCombNode * fcNode){
+    fcNode->active.value = true;
+    FlatCombNode ** pointerToOldValue = &lock->combineList.value;
+    FlatCombNode * oldValue = ACCESS_ONCE(*pointerToOldValue);
+    while (true) {
+        fcNode->next = oldValue;
+        if (__sync_bool_compare_and_swap(pointerToOldValue, oldValue, fcNode))
+            return;
+        oldValue = ACCESS_ONCE(*pointerToOldValue);
+    }
+}
 
 #endif

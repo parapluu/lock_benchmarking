@@ -51,14 +51,14 @@ RHQDLock * rhqdlock_create(void (*writer)(void *, void **));
 void rhqdlock_initialize(RHQDLock * lock, void (*defaultWriter)(void *, void **));
 void rhqdlock_free(RHQDLock * lock);
 void rhqdlock_register_this_thread();
-void rhqdlock_write_with_response(RHQDLock *rhqdlock, 
+static void rhqdlock_write_with_response(RHQDLock *rhqdlock, 
                                   void (*delgateFun)(void *, void **), 
                                   void * data, 
                                   void ** responseLocation);
-void * rhqdlock_write_with_response_block(RHQDLock *lock, 
+static void * rhqdlock_write_with_response_block(RHQDLock *lock, 
                                           void (*delgateFun)(void *, void **), 
                                           void * data);
-void rhqdlock_delegate(RHQDLock *lock, 
+static void rhqdlock_delegate(RHQDLock *lock, 
                        void (*delgateFun)(void *, void **), 
                        void * data);
 void rhqdlock_write(RHQDLock *lock, void * writeInfo);
@@ -68,5 +68,95 @@ void rhqdlock_read_lock(RHQDLock *lock);
 void rhqdlock_read_unlock(RHQDLock *lock);
 
 
+static inline
+void waitUntilWriteBarrierOff(RHQDLock *lock) {
+    bool writeBarrierOn;
+    load_acq(writeBarrierOn, lock->writeBarrier.value);    
+    while(writeBarrierOn){
+        __sync_synchronize();
+        load_acq(writeBarrierOn, lock->writeBarrier.value);
+    }
+}
 
+#ifdef PINNING
+extern __thread CacheLinePaddedInt numa_node;
+#endif
+
+static inline
+void rhqdlock_write_with_response(RHQDLock *rhqdlock, 
+                                 void (*delgateFun)(void *, void **), 
+                                 void * data, 
+                                 void ** responseLocation){
+#ifdef PINNING
+    int my_numa_node = numa_node.value;
+#else
+    int my_numa_node = sched_getcpu() % NUMBER_OF_NUMA_NODES;
+#endif
+    QDLock * localLock = &rhqdlock->localLocks[my_numa_node];
+    int counter = 0;
+    DelegateRequestEntry e;
+    e.request = delgateFun;
+    e.data = data;
+    e.responseLocation = responseLocation;
+    do{
+        if(!tataslock_is_locked(&localLock->lock)){
+            if(tataslock_try_write_read_lock(&localLock->lock)){
+                waitUntilWriteBarrierOff(rhqdlock);
+                mcslock_write_read_lock(&rhqdlock->globalLock);
+                drmvqueue_reset_fully_read(&localLock->writeQueue);
+                NZI_WAIT_UNIL_EMPTY(&rhqdlock->nonZeroIndicator);
+                delgateFun(data, responseLocation);
+                drmvqueue_flush(&localLock->writeQueue);
+                mcslock_write_read_unlock(&rhqdlock->globalLock);
+                tataslock_write_read_unlock(&localLock->lock);
+                return;
+            }
+        }else{
+            while(tataslock_is_locked(&localLock->lock)){
+                if(drmvqueue_offer(&localLock->writeQueue, e)){
+                    return;
+                }else{
+                    __sync_synchronize();
+                    __sync_synchronize();
+                }
+            }
+        }
+        if((counter & 7) == 0){
+#ifdef USE_YIELD
+            sched_yield();
+#endif
+        }
+        counter = counter + 1;
+    }while(true);
+}
+
+static inline
+void * rhqdlock_write_with_response_block(RHQDLock *lock, 
+                                      void (*delgateFun)(void *, void **), 
+                                      void * data){
+    int counter = 0;
+    void * returnValue = NULL;
+    void * currentValue;
+    rhqdlock_write_with_response(lock, delgateFun, data, &returnValue);
+    load_acq(currentValue, returnValue);
+    while(currentValue == NULL){
+        if((counter & 7) == 0){
+#ifdef USE_YIELD
+            sched_yield();
+#endif
+        }else{
+            __sync_synchronize();
+        }
+        counter = counter + 1;
+        load_acq(currentValue, returnValue);
+    }
+    return currentValue;
+}
+
+static inline
+void rhqdlock_delegate(RHQDLock *lock, 
+                      void (*delgateFun)(void *, void **), 
+                      void * data) {
+    rhqdlock_write_with_response(lock, delgateFun, data, NULL);
+}
 #endif

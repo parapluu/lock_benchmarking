@@ -12,7 +12,7 @@
 
 #define READ_PATIENCE_LIMIT 130000
 
-inline
+static inline
 bool isWriteLocked(WPRWLock * lock){
 #ifdef LOCK_TYPE_MCSLock
     MCSNode * endOfQueue;

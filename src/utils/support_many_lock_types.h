@@ -175,7 +175,7 @@ extern void no_such_lock_type_prefix_free(LOCK_DATATYPE_NAME* lock);
 
 
 #ifndef HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN
-inline
+static inline
 void * MY_FUN(write_with_response_block)(LOCK_DATATYPE_NAME *lock, 
                                          void (*delgateFun)(void *, void **), 
                                          void * data){
@@ -188,7 +188,7 @@ void * MY_FUN(write_with_response_block)(LOCK_DATATYPE_NAME *lock,
 #endif
 #define LOCK_DELEGATE_RETURN_BLOCK(lock, delegateFun, data) MY_FUN(write_with_response_block)(lock, delegateFun, data)
 #ifndef HAS_LOCK_DELEGATE_FUN
-inline
+static inline
 void MY_FUN(delegate)(LOCK_DATATYPE_NAME *lock, 
                       void (*delgateFun)(void *, void **), 
                       void * data){

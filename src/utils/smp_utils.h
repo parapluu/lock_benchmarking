@@ -56,7 +56,7 @@
   __sync_synchronize()
 #endif
 
-inline
+static inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
     int x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -66,7 +66,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-inline
+static inline
 unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
     unsigned long x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {

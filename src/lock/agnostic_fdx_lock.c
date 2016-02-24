@@ -48,18 +48,6 @@ void afdxlock_register_this_thread(){
     __sync_synchronize();
 }
 
-inline
-void activateFCNode(AgnosticFDXLock *lock, FlatCombNode * fcNode){
-    fcNode->active.value = true;
-    FlatCombNode ** pointerToOldValue = &lock->combineList.value;
-    FlatCombNode * oldValue = ACCESS_ONCE(*pointerToOldValue);
-    while (true) {
-        fcNode->next = oldValue;
-        if (__sync_bool_compare_and_swap(pointerToOldValue, oldValue, fcNode))
-            return;
-        oldValue = ACCESS_ONCE(*pointerToOldValue);
-    }
-}
 
 //Multiple of 2
 #define COMBINE_CLEAN_INTERVAL 131072
@@ -190,11 +178,6 @@ void * afdxlock_write_with_response_block(AgnosticFDXLock *lock,
     }
     return currentValue;
 } 
-
-inline
-    void afdxlock_delegate(AgnosticFDXLock *lock, void (*delgateFun)(void *, void **), void * data) {
-    afdxlock_write_with_response(lock, delgateFun, data, NULL);
-}
 
 void afdxlock_write(AgnosticFDXLock *lock, void * writeInfo) {
     afdxlock_delegate(lock, lock->defaultWriter, writeInfo);

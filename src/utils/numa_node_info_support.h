@@ -12,7 +12,7 @@ typedef union CPUToNodeMapWrapperImpl {
 
 extern CPUToNodeMapWrapper CPUToNodeMap __attribute__((aligned(64)));
 
-inline
+static inline
 int numa_node_id(){
     return CPUToNodeMap.value[sched_getcpu()];
 }

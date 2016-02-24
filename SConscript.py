@@ -22,7 +22,7 @@ use_print_thread_queue_stats = GetOption('use_print_thread_queue_stats')
 
 use_cas_fetch_and_add = GetOption('use_cas_fetch_and_add')
 
-std_cc_flags = ['-std=gnu99',
+std_cc_flags = ['-std=gnu11',
                 '-Wall',
 		'-fPIC',
                 '-pthread',
@@ -40,10 +40,12 @@ std_link_flags = ['-pthread',
 debug_flags = ['-O1',
                '-g']
 if use_llvm:
-	debug_flags.append('-fsanitize=address-full')
+	debug_flags.append('-fsanitize=address')
 
 debug_flags0 = ['-O0',
                '-g']
+if use_llvm:
+	debug_flags0.append('-fsanitize=address')
 
 optimization_flags = ['-O3']
 
@@ -65,9 +67,10 @@ else:
 cc = 'gcc'
 cxx = 'g++'
 if use_llvm:
+#if True:
 	cc = 'clang'
 	cxx = 'clang++'
-
+        std_link_flags.append('-fuse-ld=gold')
 env = Environment(
     ENV = os.environ,
     CFLAGS = ' '.join(std_cc_flags),
@@ -448,6 +451,8 @@ benchmarked_locks = [
      'lock_alias' : 'qdlock_nostarve'},
     {'lock_defines': ['USE_QDLOCK_FUTEX'],
      'lock_alias' : 'qdlock_futex'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpplock'},
     {'lock_defines': ['USE_OYAMA'],
      'lock_alias' : 'oyama'},
     {'lock_defines': ['USE_OYAMA', 'PRE_ALLOC_OPT'],
@@ -509,13 +514,25 @@ for locked_data_stucture in locked_data_stuctures:
             target = (data_structure_alias + '_' + lock_alias + '.o'),
                 source = ['src/datastructures_bench/datastructures_bench.c'],
                 CPPDEFINES = ([data_structure_define,
-			   print_thread_queue_stats_define,
-			   queue_stats_define] + 
-			  lock_defines + 
-			  numa_structure_defines()))
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+        objs = [object]
+        if 'USE_CPPLOCK' in lock_defines:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cppglue.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
         env.Program(
                 target = (data_structure_alias + '_' + lock_alias),
-                source = [object])
+                source = objs)
 
 
 jonathan_lf_object = env.Object(

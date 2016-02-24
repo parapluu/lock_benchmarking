@@ -178,6 +178,18 @@ void lock_init(){
 
 void lock_thread_init(){}
 
+#elif defined (USE_CPPLOCK)
+
+#include "datastructures_bench/synch_algorithms/cpplock.h"
+
+AgnosticDXLock lock __attribute__((aligned(64)));
+
+void lock_init(){
+    adxlock_initialize(&lock, NULL);
+}
+
+void lock_thread_init(){}
+
 #elif defined (USE_OYAMA)
 
 #include "datastructures_bench/synch_algorithms/oyama.h"
@@ -373,7 +385,7 @@ void datastructure_destroy(){
     destroy_heap(priority_queue.value);
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_HQDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_HQDLOCK_NOSTARVE) || defined(USE_CPPLOCK)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -416,9 +428,9 @@ void dequeue_cs(int notUsed, int * resultLocation){
     }
 }
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
 #ifdef NO_PURE_DELEGATE
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_CPPLOCK)
     adxlock_write_with_response_block(&lock, &enqueue_cs_write_back, value); 
 #elif defined (USE_OYAMA)
     oyamalock_write_with_response_block(&lock, &enqueue_cs_write_back, value); 
@@ -426,7 +438,8 @@ inline void enqueue(int value){
     hqdlock_write_with_response_block(&lock, &enqueue_cs_write_back, value);
 #endif
 #else
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_CPPLOCK)
+
     adxlock_delegate(&lock, &enqueue_cs, value);
 #elif defined (USE_OYAMA)
     oyamalock_delegate(&lock, &enqueue_cs, value); 
@@ -435,8 +448,9 @@ inline void enqueue(int value){
 #endif
 #endif
 }
-inline int dequeue(){
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
+static inline int dequeue(){
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_CPPLOCK)
+
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #elif defined (USE_OYAMA)
     return oyamalock_write_with_response_block(&lock, &dequeue_cs, 0);
@@ -540,18 +554,18 @@ int dequeue_cs(){
     }
 }
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     do_op(&lock, &thread_state, value);
     //    adxlock_delegate(&lock, &enqueue_cs, value); 
 }
-inline int dequeue(){
+static inline int dequeue(){
     return do_op(&lock, &thread_state, _DEQ_VALUE);
     //adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 }
 
 #elif defined (USE_CLH)
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     clhLock(&lock, 0/*Not used*/);
 #ifdef SANITY_CHECK
     enqueues_executed.value++;
@@ -563,7 +577,7 @@ inline void enqueue(int value){
         insert(priority_queue.value, value);
     clhUnlock(&lock, 0/*Not used*/);
 }
-inline int dequeue(){
+static inline int dequeue(){
     int result;
     clhLock(&lock, 0/*Not used*/);
 #ifdef SANITY_CHECK
@@ -587,7 +601,7 @@ inline int dequeue(){
 
 #elif defined (USE_COHORTLOCK)
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     cohortlock_write_read_lock(&lock);
 #ifdef SANITY_CHECK
     enqueues_executed.value++;
@@ -599,7 +613,7 @@ inline void enqueue(int value){
         insert(priority_queue.value, value);
     cohortlock_write_read_unlock(&lock);
 }
-inline int dequeue(){
+static inline int dequeue(){
     int result;
     cohortlock_write_read_lock(&lock);
 #ifdef SANITY_CHECK
@@ -623,7 +637,7 @@ inline int dequeue(){
 
 #elif defined (USE_PTHREADSLOCK)
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     pthread_mutex_lock(&lock);
 #ifdef SANITY_CHECK
     enqueues_executed.value++;
@@ -635,7 +649,7 @@ inline void enqueue(int value){
         insert(priority_queue.value, value);
     pthread_mutex_unlock(&lock);
 }
-inline int dequeue(){
+static inline int dequeue(){
     int result;
     pthread_mutex_lock(&lock);
 #ifdef SANITY_CHECK
@@ -685,7 +699,7 @@ void datastructure_destroy(){
 }
 
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
 
 #ifdef DEBUG_PRINT_IN_CS
     printf("ENQ CS %d\n", value);
@@ -693,7 +707,7 @@ inline void enqueue(int value){
     insertq(padded_priority_queue.priority_queue, value, (void *)(long)value);
 
 }
-inline int dequeue(){
+static inline int dequeue(){
     int result;
     void * resultPtr = deletemin(padded_priority_queue.priority_queue);
     if(resultPtr != NULL){
@@ -737,7 +751,7 @@ void datastructure_thread_init(){}
 
 void datastructure_destroy(){}
 
-inline void cs_work(){
+static inline void cs_work(){
     unsigned short * xsubi = myXsubi;
     for(int i = 0; i < imsw.iterationsSpentCriticalWork; i++){
         int writeToPos1 = (int)(jrand48(xsubi) & ELEMENT_POS_MASK);
@@ -748,7 +762,7 @@ inline void cs_work(){
     }
 }
 
-#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_HQDLOCK_NOSTARVE)
+#if defined (USE_QDLOCK) || defined (USE_HQDLOCK) || defined (USE_QDLOCKP) || defined (USE_OYAMA) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_HQDLOCK_NOSTARVE) || defined(USE_CPPLOCK)
 
 void enqueue_cs(int enqueueValue, int * notUsed){
 #ifdef SANITY_CHECK
@@ -765,8 +779,8 @@ void dequeue_cs(int notUsed, int * resultLocation){
     *resultLocation = 1;
 }
 
-inline void enqueue(int value){
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
+static inline void enqueue(int value){
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_CPPLOCK)
     adxlock_delegate(&lock, &enqueue_cs, value);
 #elif defined (USE_OYAMA)
     oyamalock_delegate(&lock, &enqueue_cs, value);
@@ -774,8 +788,8 @@ inline void enqueue(int value){
     hqdlock_delegate(&lock, &enqueue_cs, value);
 #endif
 }
-inline int dequeue(){
-#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX)
+static inline int dequeue(){
+#if defined (USE_QDLOCK) || defined (USE_QDLOCKP) || defined(USE_QDLOCK_NOSTARVE) || defined(USE_QDLOCK_FUTEX) || defined(USE_CPPLOCK)
     return adxlock_write_with_response_block(&lock, &dequeue_cs, 0);
 #elif defined (USE_OYAMA)
     return oyamalock_write_with_response_block(&lock, &dequeue_cs, 0);
@@ -848,16 +862,16 @@ int dequeue_cs(){
     return 1;
 }
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     do_op(&lock, &thread_state, value);
 }
-inline int dequeue(){
+static inline int dequeue(){
     return do_op(&lock, &thread_state, _DEQ_VALUE);
 }
 
 #elif defined (USE_CLH)
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     clhLock(&lock, 0/*Not used*/);
 #ifdef SANITY_CHECK
     enqueues_executed.value++;
@@ -865,7 +879,7 @@ inline void enqueue(int value){
     cs_work();
     clhUnlock(&lock, 0/*Not used*/);
 }
-inline int dequeue(){
+static inline int dequeue(){
     clhLock(&lock, 0/*Not used*/);
 #ifdef SANITY_CHECK
     dequeues_executed.value++;
@@ -877,7 +891,7 @@ inline int dequeue(){
 
 #elif defined (USE_COHORTLOCK)
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     cohortlock_write_read_lock(&lock);
 #ifdef SANITY_CHECK
     enqueues_executed.value++;
@@ -885,7 +899,7 @@ inline void enqueue(int value){
     cs_work();
     cohortlock_write_read_unlock(&lock);
 }
-inline int dequeue(){
+static inline int dequeue(){
     cohortlock_write_read_lock(&lock);
 #ifdef SANITY_CHECK
     dequeues_executed.value++;
@@ -897,7 +911,7 @@ inline int dequeue(){
 
 #elif defined (USE_PTHREADSLOCK)
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     pthread_mutex_lock(&lock);
 #ifdef SANITY_CHECK
     enqueues_executed.value++;
@@ -905,7 +919,7 @@ inline void enqueue(int value){
     cs_work();
     pthread_mutex_unlock(&lock);
 }
-inline int dequeue(){
+static inline int dequeue(){
     pthread_mutex_lock(&lock);
 #ifdef SANITY_CHECK
     dequeues_executed.value++;
@@ -945,10 +959,10 @@ void datastructure_thread_init(){}
 
 void datastructure_destroy(){}
 
-inline void enqueue(int value){
+static inline void enqueue(int value){
     __sync_fetch_and_add(&fetchAndAddWord.value, 1);
 }
-inline int dequeue(){
+static inline int dequeue(){
     return __sync_fetch_and_add(&fetchAndAddWord.value, 1);    
 }
 #endif

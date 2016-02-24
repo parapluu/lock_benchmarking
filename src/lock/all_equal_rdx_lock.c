@@ -11,7 +11,7 @@
 
 __thread Node myNode __attribute__((aligned(64)));
 
-inline
+static inline
 Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
     Node * x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -21,7 +21,7 @@ Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
     }
 }
 
-inline
+static inline
 void disableReadSpinning(Node * node){
     store_rel(node->readSpinningEnabled.value, false);
     //We need a StoreLoad barrier since we don't want the store above
@@ -30,7 +30,7 @@ void disableReadSpinning(Node * node){
     NZI_WAIT_UNIL_EMPTY(&node->nonZeroIndicator);
 }
 
-inline
+static inline
 bool tryReadSpinningInQueue(AllEqualRDXLock * lock, Node * myNode){
     Node * node;
     int spinInNodeEnabled;
@@ -161,7 +161,7 @@ void aerlock_write_read_unlock(AllEqualRDXLock * lock) {
     __sync_synchronize();//Push change
 }
 
-inline
+static inline
 void convertReadLockToWriteLock(AllEqualRDXLock *lock, Node * node){
     node->readLockIsWriteLock = true;
     aerlock_write_read_lock(lock);

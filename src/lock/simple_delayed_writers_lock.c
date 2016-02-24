@@ -7,7 +7,7 @@
 #include "utils/smp_utils.h"
 
 
-inline
+static inline
 Node * get_and_set_node_ptr(Node ** pointerToOldValue, Node * newValue){
     Node * x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {

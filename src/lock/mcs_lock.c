@@ -6,7 +6,7 @@
 
 __thread MCSNode myMCSNode __attribute__((aligned(64)));
 
-inline
+static inline
 MCSNode * get_and_set_node_ptr(MCSNode ** pointerToOldValue, MCSNode * newValue){
     MCSNode * x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {

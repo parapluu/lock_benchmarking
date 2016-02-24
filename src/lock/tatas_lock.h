@@ -27,14 +27,14 @@ void tataslock_write_read_unlock(TATASLock * lock);
 void tataslock_read_lock(TATASLock *lock);
 void tataslock_read_unlock(TATASLock *lock);
 
-inline
+static inline
 bool tataslock_is_locked(TATASLock *lock){
     bool locked;
     load_acq(locked, lock->lockWord.value);
     return locked;
 }
 
-inline
+static inline
 bool tataslock_try_write_read_lock(TATASLock *lock) {
     return !__sync_lock_test_and_set(&lock->lockWord.value, true);
 }

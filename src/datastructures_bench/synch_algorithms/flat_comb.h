@@ -67,7 +67,7 @@
   __sync_synchronize()
 #endif
 
-inline
+static inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
     int x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -77,7 +77,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-inline
+static inline
 unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
     unsigned long x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -140,9 +140,9 @@ void tataslock_free(TATASLock * lock){
 void tataslock_register_this_thread(){
 }
 
-inline
+static inline
 void tataslock_write_read_lock(TATASLock *lock);
-inline
+static inline
 void tataslock_write_read_unlock(TATASLock * lock);
 void tataslock_write(TATASLock *lock, int writeInfo) {
     tataslock_write_read_lock(lock);
@@ -166,7 +166,7 @@ void tataslock_write_read_lock(TATASLock *lock) {
     }
 }
 
-inline
+static inline
 void tataslock_write_read_unlock(TATASLock * lock) {
     __sync_lock_release(&lock->lockWord.value);
 }
@@ -180,14 +180,14 @@ void tataslock_read_unlock(TATASLock *lock) {
 }
 
 
-inline
+static inline
 bool tataslock_is_locked(TATASLock *lock){
     bool locked;
     load_acq(locked, lock->lockWord.value);
     return locked;
 }
 
-inline
+static inline
 bool tataslock_try_write_read_lock(TATASLock *lock) {
     return !__sync_lock_test_and_set(&lock->lockWord.value, true);
 }
@@ -272,7 +272,7 @@ SlotInfo* get_new_slot(FlatComb * flatcomb, SlotInfo * _tls_slot_info) {
 /*     } */
 /* } */
 
-inline void flat_combining(FlatComb * flatcomb) {
+static inline void flat_combining(FlatComb * flatcomb) {
 #ifdef QUEUE_STATS
     helpSeasonsPerformed.value++;
 #endif

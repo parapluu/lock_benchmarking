@@ -21,7 +21,7 @@ typedef struct NUMAIngressEgressNZIImpl {
     IngressEgressCounter readerCounters[NUMBER_OF_NUMA_NODES];
 } NUMAIngressEgress;
 
-inline
+static inline
 void nienzi_initialize(NUMAIngressEgress * nzi){
     for(int i = 0; i < NUMBER_OF_NUMA_NODES; i++){
         nzi->readerCounters[i].ingress = 0;
@@ -30,21 +30,21 @@ void nienzi_initialize(NUMAIngressEgress * nzi){
     __sync_synchronize();
 }
 
-inline
+static inline
 void nienzi_arrive(NUMAIngressEgress * nzi){
     int myNumaNode = numa_node_id();
     myIngressEgressArriveNumaNode.value = myNumaNode;
     __sync_fetch_and_add(&nzi->readerCounters[myNumaNode].ingress, 1);
 }
 
-inline
+static inline
 void nienzi_depart(NUMAIngressEgress * nzi){
     int myNumaNode = myIngressEgressArriveNumaNode.value;
     __sync_fetch_and_add(&nzi->readerCounters[myNumaNode].egress, 1);
 }
 
 
-inline
+static inline
 bool nienzi_query(NUMAIngressEgress * nzi){
     for(int i = 0; i < NUMBER_OF_NUMA_NODES; i++){
         if(ACCESS_ONCE(nzi->readerCounters[i].ingress) !=
@@ -55,7 +55,7 @@ bool nienzi_query(NUMAIngressEgress * nzi){
     return true;
 }
 
-inline
+static inline
 void nienzi_wait_unil_empty(NUMAIngressEgress * nzi){
     int ingressCount;
     int egressCount;

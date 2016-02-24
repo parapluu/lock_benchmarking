@@ -67,7 +67,7 @@
   __sync_synchronize()
 #endif
 
-inline
+static inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
     int x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -77,7 +77,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-inline
+static inline
 unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
     unsigned long x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -326,7 +326,7 @@ void cohortlock_write_read_unlock(CohortLock * lock);
 void cohortlock_read_lock(CohortLock *lock);
 void cohortlock_read_unlock(CohortLock *lock);
 
-inline
+static inline
 bool cohortlock_is_locked(CohortLock *lock){
     int inCounter;
     int outCounter;
@@ -337,7 +337,7 @@ bool cohortlock_is_locked(CohortLock *lock){
 
 extern __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
 
-inline
+static inline
 bool cohortlock_is_local_locked(CohortLock *lock){
     int inCounter;
     int outCounter;
@@ -347,7 +347,7 @@ bool cohortlock_is_local_locked(CohortLock *lock){
     return (inCounter != outCounter);
 }
 
-inline
+static inline
 bool cohortlock_try_write_read_lock(CohortLock *lock) {
     if(!cohortlock_is_locked(lock) && 
        !cohortlock_is_local_locked(lock)){
@@ -368,7 +368,7 @@ bool cohortlock_try_write_read_lock(CohortLock *lock) {
 
 __thread CacheLinePaddedInt myLocalNode __attribute__((aligned(64)));
 
-inline
+static inline
 bool nodeHasWaitingThreads(TicketLock * localLock){
     int localLockInCounter;
     int localLockOutCounter;
@@ -392,7 +392,7 @@ typedef union CPUToNodeMapWrapperImpl {
 
 CPUToNodeMapWrapper CPUToNodeMap __attribute__((aligned(64)));
 
-inline
+static inline
 int numa_node_id(){
     return CPUToNodeMap.value[sched_getcpu()];
 }

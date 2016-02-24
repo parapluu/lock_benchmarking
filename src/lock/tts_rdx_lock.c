@@ -31,7 +31,7 @@ void ttsalock_register_this_thread(){
     assign_id_to_thread();
 }
 
-inline
+static inline
 void waitUntilWriteBarrierOff(TTSRDXLock *lock) {
     bool writeBarrierOn;
     load_acq(writeBarrierOn, lock->writeBarrier.value);    

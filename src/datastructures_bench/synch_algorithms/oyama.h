@@ -69,7 +69,7 @@
   __sync_synchronize()
 #endif
 
-inline
+static inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
     int x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -79,7 +79,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-inline
+static inline
 unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
     unsigned long x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -176,7 +176,7 @@ void oyamalock_register_this_thread(){}
 
 #ifdef PRE_ALLOC_OPT
 
-inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int data, int * responseLocation){
+static inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int data, int * responseLocation){
     OyamaContext * context = &oyamaContexts[currentOyamaContext.value];
     bool isFree;
     load_acq(isFree, context->free);
@@ -202,7 +202,7 @@ void oyama_free_context(OyamaContext * context){
 
 #else
 
-inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int data, int * responseLocation){
+static inline OyamaContext * oyama_make_context(void (*delgateFun)(int, int *), int data, int * responseLocation){
 OyamaContext * context = memalign(64, (sizeof(OyamaContext)));
     context->delgateFun = delgateFun;
     context->data = data;
@@ -217,7 +217,7 @@ void oyama_free_context(OyamaContext * context){
 #endif
 
 
-inline void oyama_release_lock(OyamaLock *lock){
+static inline void oyama_release_lock(OyamaLock *lock){
     while(true){
         if(__sync_bool_compare_and_swap(&lock->lockWord.value, LOCK_IS_LOCKED_FLAG, LOCK_IS_FREE_FLAG)){
             return;
@@ -249,7 +249,7 @@ inline void oyama_release_lock(OyamaLock *lock){
     }
 }
 
-inline bool oyama_insert(OyamaLock *lock, OyamaContext * context){
+static inline bool oyama_insert(OyamaLock *lock, OyamaContext * context){
     OyamaContext * lockWordValue;
     while(true){
         load_acq(lockWordValue, lock->lockWord.value);
@@ -271,7 +271,7 @@ inline bool oyama_insert(OyamaLock *lock, OyamaContext * context){
     }
 }
 
-inline
+static inline
 void oyamalock_write_with_response(OyamaLock *lock, 
                                    void (*delgateFun)(int, int *), 
                                    int data, 
@@ -295,7 +295,7 @@ void oyamalock_write_with_response(OyamaLock *lock,
     }
 }
 
-inline
+static inline
 int oyamalock_write_with_response_block(OyamaLock *lock, 
                                       void (*delgateFun)(int, int *), 
                                       int data){
@@ -318,7 +318,7 @@ int oyamalock_write_with_response_block(OyamaLock *lock,
     return currentValue;
 }
 
-inline
+static inline
 void oyamalock_delegate(OyamaLock *lock, 
                       void (*delgateFun)(int, int *), 
                       int data) {

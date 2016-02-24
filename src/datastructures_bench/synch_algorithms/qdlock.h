@@ -68,7 +68,7 @@
   __sync_synchronize()
 #endif
 
-inline
+static inline
 int get_and_set_int(int * pointerToOldValue, int newValue){
     int x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -78,7 +78,7 @@ int get_and_set_int(int * pointerToOldValue, int newValue){
     }
 }
 
-inline
+static inline
 unsigned long get_and_set_ulong(unsigned long * pointerToOldValue, unsigned long newValue){
     unsigned long x = ACCESS_ONCE(*pointerToOldValue);
     while (true) {
@@ -141,9 +141,9 @@ void tataslock_free(TATASLock * lock){
 void tataslock_register_this_thread(){
 }
 
-inline
+static inline
 void tataslock_write_read_lock(TATASLock *lock);
-inline
+static inline
 void tataslock_write_read_unlock(TATASLock * lock);
 void tataslock_write(TATASLock *lock, int writeInfo) {
     tataslock_write_read_lock(lock);
@@ -167,7 +167,7 @@ void tataslock_write_read_lock(TATASLock *lock) {
     }
 }
 
-inline
+static inline
 void tataslock_write_read_unlock(TATASLock * lock) {
     __sync_lock_release(&lock->lockWord.value);
 }
@@ -181,14 +181,14 @@ void tataslock_read_unlock(TATASLock *lock) {
 }
 
 
-inline
+static inline
 bool tataslock_is_locked(TATASLock *lock){
     bool locked;
     load_acq(locked, lock->lockWord.value);
     return locked;
 }
 
-inline
+static inline
 bool tataslock_try_write_read_lock(TATASLock *lock) {
     //return __sync_bool_compare_and_swap(&lock->lockWord.value, false, true);
     return !__sync_lock_test_and_set(&lock->lockWord.value, true);
@@ -218,13 +218,13 @@ typedef struct DRMWQImpl {
 
 DRMWQueue * drmvqueue_create();
 DRMWQueue * drmvqueue_initialize(DRMWQueue * queue);
-void drmvqueue_free(DRMWQueue * queue);
-bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e);
-void drmvqueue_flush(DRMWQueue * queue);
-void drmvqueue_reset_fully_read(DRMWQueue *  queue);
+static void drmvqueue_free(DRMWQueue * queue);
+static bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e);
+static void drmvqueue_flush(DRMWQueue * queue);
+static void drmvqueue_reset_fully_read(DRMWQueue *  queue);
 
 
-inline 
+static inline
 int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith){
     int oldValCAS;
     int oldVal = ACCESS_ONCE(*valueAddress);
@@ -244,7 +244,7 @@ int CAS_fetch_and_add(unsigned long * valueAddress, unsigned long incrementWith)
 #define FETCH_AND_ADD(valueAddress, incrementWith) __sync_fetch_and_add(valueAddress, incrementWith) 
 #endif 
 
-inline
+static inline
 unsigned long min(unsigned long i1, unsigned long i2){
     return i1 < i2 ? i1 : i2;
 }
@@ -273,7 +273,7 @@ void drmvqueue_free(DRMWQueue * queue){
 #define NEWOFFER
 #ifdef NEWOFFER
 
-inline
+static inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
@@ -295,7 +295,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
 
 #else
 
-inline
+static inline
 bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
     bool closed;
     load_acq(closed, queue->closed.value);
@@ -320,7 +320,7 @@ bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e){
 #endif
 
 
-inline
+static inline
 void drmvqueue_flush(DRMWQueue * queue){
     unsigned long numOfElementsToRead;
     unsigned long newNumOfElementsToRead;
@@ -390,7 +390,7 @@ void drmvqueue_flush(DRMWQueue * queue){
     }
 }
 
-inline
+static inline
 void drmvqueue_reset_fully_read(DRMWQueue * queue){
     store_rel(queue->elementCount.value, 0);
     store_rel(queue->closed.value, false);
@@ -433,7 +433,7 @@ void adxlock_free(AgnosticDXLock * lock){
 void adxlock_register_this_thread(){
 }
 
-inline
+static inline
 void adxlock_write_with_response(AgnosticDXLock *lock, 
                                  void (*delgateFun)(int, int *), 
                                  int data, 
@@ -481,7 +481,7 @@ void adxlock_write_with_response(AgnosticDXLock *lock,
     }while(true);
 }
 
-inline
+static inline
 int adxlock_write_with_response_block(AgnosticDXLock *lock, 
                                       void (*delgateFun)(int, int *), 
                                       int data){
@@ -504,7 +504,7 @@ int adxlock_write_with_response_block(AgnosticDXLock *lock,
     return currentValue;
 }
 
-inline
+static inline
 void adxlock_delegate(AgnosticDXLock *lock, 
                       void (*delgateFun)(int, int *), 
                       int data) {
