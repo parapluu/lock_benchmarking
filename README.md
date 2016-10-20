@@ -1,8 +1,22 @@
-Mutual Exclusion Locks and Benchmarks 
-=====================================
+Locks and Benchmarks 
+====================
 
 This repository contains lock implementations, delegation lock
-implementations and a set of benchmarks.
+implementations and a set of benchmarks. The code in this repository
+is mainly intended for evaluation of different locking algorithms. If
+you are looking for delegation locking implementations to use in your
+application, we recommend our locking libraries for [C][CQDLib] and
+[C++][CPPQDLib]. The code in this repository was originally written
+for the micro-benchmark parts of the evaluation of locking algorithms
+in the paper [Queue Delegation Locking][QDLPage]. The code needed to
+reproduce all the results from the Queue Delegation Locking paper is
+located in [another repository][QDBenchmarking].
+
+[CPPQDLib]: https://github.com/davidklaftenegger/qd_library
+[CQDLib]: https://github.com/kjellwinblad/qd_lock_lib
+[QDLPage]: http://www.it.uu.se/research/group/languages/software/qd_lock_lib
+[QDLPage]: http://www.it.uu.se/research/group/languages/software/qd_lock_lib
+[QDBenchmarking]: https://github.com/davidklaftenegger/qd-benchmarking
 
 ## Lock Implementations ##
 
