@@ -4,7 +4,7 @@
 typedef struct AgnosticDXLockImpl {
     void (*defaultWriter)(int, int *);
     char pad2[64 - (sizeof(void * (*)(void*)) % 64)];
-    char lock[1024*1024];
+    char lock[256*1024*1024];
 } AgnosticDXLock;
 
 AgnosticDXLock* cpplock_new();

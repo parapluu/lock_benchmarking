@@ -135,6 +135,15 @@
 #define LOCK_DATATYPE_NAME RHQDLock
 #define LOCK_FUN_PREFIX rhqdlock
 
+#elif defined (LOCK_TYPE_RCPPLock)
+
+#include "lock/rcpp_lock.h"
+
+#define HAS_LOCK_DELEGATE_FUN 1
+#define HAS_LOCK_DELEGATE_RETURN_BLOCK_FUN 1
+#define LOCK_DATATYPE_NAME RCPPLock
+#define LOCK_FUN_PREFIX rcpplock
+
 #else
 #ifdef LOCK_DUMMY_FUNCTIONS
 

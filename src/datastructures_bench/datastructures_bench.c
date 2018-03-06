@@ -95,7 +95,7 @@ bool * benchmarkStoped = &benchmarkStopedWrapper.value;
 BoolWrapper benchmarkStartedWrapper __attribute__((aligned(64)));
 bool * benchmarkStarted = &benchmarkStartedWrapper.value;
 
-SeedWrapper threadLocalSeeds[128] __attribute__((aligned(64)));
+SeedWrapper threadLocalSeeds[512] __attribute__((aligned(64)));
 
 //========================
 //Benchmark imutable state
@@ -492,8 +492,15 @@ void dequeue_cs(int notUsed, int * resultLocation){
 #ifdef DEBUG_PRINT_IN_CS
         printf("DEQ CS %d\n", top(priority_queue.value));
 #endif
-        *resultLocation = top(priority_queue.value);
-        priority_queue.value = pop(priority_queue.value);
+        //store_rel(*resultLocation, top(priority_queue.value));
+	//priority_queue.value = pop(priority_queue.value);
+        int local = top(priority_queue.value);
+	priority_queue.value = pop(priority_queue.value);
+#ifdef USE_CPPLOCK
+	*resultLocation = local;
+#else
+	store_rel(*resultLocation, local);
+#endif
     }else{
 #ifdef DEBUG_PRINT_IN_CS
         printf("DEQ CS %d\n", -1);
@@ -1121,7 +1128,7 @@ void *mixed_read_write_benchmark_thread(void *lockThreadLocalSeedPointer){
     int privateArray[NUMBER_OF_ELEMENTS_IN_ARRAYS];
     unsigned short * xsubi = lockThreadLocalSeed->seed;
 #ifdef PINNING
-    pin(lockThreadLocalSeed->thread_id);
+    //pin(lockThreadLocalSeed->thread_id);
 #endif
     myXsubi = xsubi;
     int dummy = 0;//To avoid that the compiler optimize away read
@@ -1200,7 +1207,7 @@ result benchmark_parallel_mixed_enqueue_dequeue(double percentageDequeueParam,
                                                 int benchmarkTimeSeconds,
                                                 int iterationsSpentCriticalWorkParam,
                                                 int iterationsSpentInNonCriticalWorkParam){
-    if(numberOfThreads>128){
+    if(numberOfThreads>512){
         printf("You need to increase the threadLocalSeeds variable!\n");
         assert(false);
     }

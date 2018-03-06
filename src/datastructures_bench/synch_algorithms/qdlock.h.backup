@@ -128,19 +128,16 @@ typedef struct TATASLockImpl {
 } TATASLock;
 
 
-static inline
 void tataslock_initialize(TATASLock * lock, void (*writer)(int, int *)){
     lock->writer = writer;
     lock->lockWord.value = 0;
     __sync_synchronize();
 }
 
-static inline
 void tataslock_free(TATASLock * lock){
     free(lock);
 }
 
-static inline
 void tataslock_register_this_thread(){
 }
 
@@ -148,14 +145,12 @@ static inline
 void tataslock_write_read_lock(TATASLock *lock);
 static inline
 void tataslock_write_read_unlock(TATASLock * lock);
-static inline
 void tataslock_write(TATASLock *lock, int writeInfo) {
     tataslock_write_read_lock(lock);
     lock->writer(writeInfo, 0);
     tataslock_write_read_unlock(lock);
 }
 
-static inline
 void tataslock_write_read_lock(TATASLock *lock) {
     bool currentlylocked;
     while(true){
@@ -177,12 +172,10 @@ void tataslock_write_read_unlock(TATASLock * lock) {
     __sync_lock_release(&lock->lockWord.value);
 }
 
-static inline
 void tataslock_read_lock(TATASLock *lock) {
     tataslock_write_read_lock(lock);
 }
 
-static inline
 void tataslock_read_unlock(TATASLock *lock) {
     tataslock_write_read_unlock(lock);
 }
@@ -205,7 +198,6 @@ bool tataslock_try_write_read_lock(TATASLock *lock) {
 
 #define MWQ_CAPACITY MAX_NUM_OF_HELPED_OPS
 
-#define PAD_QUEUE_ELEMENTS_TO_TWO_CACHE_LINES
 typedef struct DelegateRequestEntryImpl {
     void (*request)(int, int*);
     int data;
@@ -224,8 +216,8 @@ typedef struct DRMWQImpl {
     char padd3[64 - ((sizeof(DelegateRequestEntry)*MWQ_CAPACITY) % 64)];
 } DRMWQueue;
 
-static DRMWQueue * drmvqueue_create();
-static DRMWQueue * drmvqueue_initialize(DRMWQueue * queue);
+DRMWQueue * drmvqueue_create();
+DRMWQueue * drmvqueue_initialize(DRMWQueue * queue);
 static void drmvqueue_free(DRMWQueue * queue);
 static bool drmvqueue_offer(DRMWQueue * queue, DelegateRequestEntry e);
 static void drmvqueue_flush(DRMWQueue * queue);
@@ -257,13 +249,11 @@ unsigned long min(unsigned long i1, unsigned long i2){
     return i1 < i2 ? i1 : i2;
 }
 
-static inline
 DRMWQueue * drmvqueue_create(){
     DRMWQueue * queue = (DRMWQueue *)malloc(sizeof(DRMWQueue));
     return drmvqueue_initialize(queue);
 }
 
-static inline
 DRMWQueue * drmvqueue_initialize(DRMWQueue * queue){
     for(int i = 0; i < MWQ_CAPACITY; i++){
         queue->elements[i].request = NULL;
@@ -421,50 +411,125 @@ typedef struct AgnosticDXLockImpl {
     char pad4[64];
 } AgnosticDXLock;
 
-
-AgnosticDXLock * adxlock_create(void (*writer)(int, int *));
-
 void adxlock_initialize(AgnosticDXLock * lock, void (*defaultWriter)(int, int *));
+AgnosticDXLock * adxlock_create(void (*writer)(int, int *)){
+    AgnosticDXLock * lock = (AgnosticDXLock *)malloc(sizeof(AgnosticDXLock));
+    adxlock_initialize(lock, writer);
+    return lock;
+}
 
-static inline
+void adxlock_initialize(AgnosticDXLock * lock, void (*defaultWriter)(int, int *)){
+    //TODO check if the following typecast is fine
+    lock->defaultWriter = defaultWriter;
+    tataslock_initialize(&lock->lock, defaultWriter);
+    drmvqueue_initialize(&lock->writeQueue);
+    __sync_synchronize();
+}
+
 void adxlock_free(AgnosticDXLock * lock){
     free(lock);
 }
 
-static inline
 void adxlock_register_this_thread(){
 }
 
-
+static inline
 void adxlock_write_with_response(AgnosticDXLock *lock, 
                                  void (*delgateFun)(int, int *), 
                                  int data, 
-                                 int * responseLocation);
-
-int adxlock_write_with_response_block(AgnosticDXLock *lock, 
-                                      void (*delgateFun)(int, int *), 
-                                      int data);
-void adxlock_delegate(AgnosticDXLock *lock, 
-                      void (*delgateFun)(int, int *), 
-                      int data);
-
-void adxlock_write(AgnosticDXLock *lock, int writeInfo);
+                                 int * responseLocation){
+    int counter = 0;
+    DelegateRequestEntry e;
+    e.request = delgateFun;
+    e.data = data;
+    e.responseLocation = responseLocation;
+    do{
+        if(!tataslock_is_locked(&lock->lock)){
+            if(tataslock_try_write_read_lock(&lock->lock)){
+#ifdef ACTIVATE_NO_CONTENTION_OPT
+	        if(counter > 0){
+#endif
+                    drmvqueue_reset_fully_read(&lock->writeQueue);
+                    delgateFun(data, responseLocation);
+                    drmvqueue_flush(&lock->writeQueue);
+                    tataslock_write_read_unlock(&lock->lock);
+                    return;
+#ifdef ACTIVATE_NO_CONTENTION_OPT
+	        }else{
+                    delgateFun(data, responseLocation);
+		    tataslock_write_read_unlock(&lock->lock);
+		    return;
+                }
+#endif
+            }
+        }else{
+            while(tataslock_is_locked(&lock->lock)){
+                if(drmvqueue_offer(&lock->writeQueue, e)){
+                    return;
+                }else{
+                    __sync_synchronize();
+                    __sync_synchronize();
+                }
+            }
+        }
+        if((counter & 7) == 0){
+#ifdef USE_YIELD
+            sched_yield();
+#endif
+        }
+        counter = counter + 1;
+    }while(true);
+}
 
 static inline
+int adxlock_write_with_response_block(AgnosticDXLock *lock, 
+                                      void (*delgateFun)(int, int *), 
+                                      int data){
+    int counter = 0;
+    int returnValue = INT_MIN;
+    int currentValue;
+    adxlock_write_with_response(lock, delgateFun, data, &returnValue);
+    load_acq(currentValue, returnValue);
+    while(currentValue == INT_MIN){
+        if((counter & 7) == 0){
+#ifdef USE_YIELD
+            sched_yield();
+#endif
+        }else{
+            __sync_synchronize();
+        }
+        counter = counter + 1;
+        load_acq(currentValue, returnValue);
+    }
+    return currentValue;
+}
+
+static inline
+void adxlock_delegate(AgnosticDXLock *lock, 
+                      void (*delgateFun)(int, int *), 
+                      int data) {
+    adxlock_write_with_response(lock, delgateFun, data, NULL);
+}
+
+void adxlock_write(AgnosticDXLock *lock, int writeInfo) {
+    adxlock_delegate(lock, lock->defaultWriter, writeInfo);
+}
+
 void adxlock_write_read_lock(AgnosticDXLock *lock) {
     tataslock_write_read_lock(&lock->lock);    
     drmvqueue_reset_fully_read(&lock->writeQueue);
     __sync_synchronize();//Flush
 }
 
-void adxlock_write_read_unlock(AgnosticDXLock * lock);
+void adxlock_write_read_unlock(AgnosticDXLock * lock) {
+    drmvqueue_flush(&lock->writeQueue);
+    tataslock_write_read_unlock(&lock->lock);
+}
 
-static inline
 void adxlock_read_lock(AgnosticDXLock *lock) {
     adxlock_write_read_lock(lock);
 }
 
-static inline
 void adxlock_read_unlock(AgnosticDXLock *lock) {
     adxlock_write_read_unlock(lock);
 }

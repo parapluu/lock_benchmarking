@@ -21,7 +21,10 @@ def read_dat_file(the_file):
             y.append(float(p[2])/float(p[1]))
         return (x, y)
 
+from itertools import cycle
+markers = None
 def set_up_figure(title):
+    markers = cycle(['o', 's', 'd', '^', 'v', '<', '>', 'D', 'h'])
     plt.figure()
     plt.autoscale(enable=True, tight=False)
     plt.xlabel('Number of Threads')
@@ -46,7 +49,7 @@ def complete_figure(save_file_name):
     plt.axis(ymin=0)
     plt.tight_layout()
     plt.legend(loc='best')
-    plt.savefig(save_file_name + '.' + Format, bbox_inches='tight')
+    plt.savefig(save_file_name + '.' + Format, bbox_inches='tight', dpi=400)
     print save_file_name + '.' + Format
 
 

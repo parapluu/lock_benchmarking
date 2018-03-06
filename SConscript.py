@@ -36,6 +36,7 @@ std_cxx_flags = ['-std=c++11',
 
 std_link_flags = ['-pthread',
 		  '-lrt',
+		  '-lnuma',
 		  '-std=gnu11']
 
 debug_flags = ['-O1',
@@ -48,6 +49,7 @@ debug_flags0 = ['-O0',
 if use_llvm:
 	debug_flags0.append('-fsanitize=address')
 
+#optimization_flags = ['-Ofast -march=native -flto -fwhole-program']
 optimization_flags = ['-O3']
 
 profile_flags = ['-fno-omit-frame-pointer -O2']
@@ -68,7 +70,6 @@ else:
 cc = 'gcc'
 cxx = 'g++'
 if use_llvm:
-#if True:
 	cc = 'clang'
 	cxx = 'clang++'
         std_link_flags.append('-fuse-ld=gold')
@@ -80,6 +81,7 @@ env = Environment(
     CXX = cxx,
     LINKFLAGS = ' '.join(std_link_flags),
     CPPPATH = ['.',
+               '../qd_library/',
                'src/',
                'src/lock',
                'src/datastructures',
@@ -275,6 +277,18 @@ lock_infos = OrderedDict([
                       'other_deps'  : [object_thread_id,
                                        object_dr_multi_writers_queue],
                       'uses_nzi'     : False}),
+        ('rcpp_qd',   {'source'      : 'rglue_qd',
+                      'defines'     : ['LOCK_TYPE_RCPPLock', pinning_def] + numa_structure_defines(),
+                      'exe_defines' : ['LOCK_TYPE_RCPPLock', pinning_def]  + numa_structure_defines(),
+                      'lock_deps'   : [],
+                      'other_deps'  : [],
+                      'uses_nzi'     : False}),
+        ('rcpp_hqd',  {'source'      : 'rglue_hqd',
+                      'defines'     : ['LOCK_TYPE_RCPPLock', pinning_def] + numa_structure_defines(),
+                      'exe_defines' : ['LOCK_TYPE_RCPPLock', pinning_def]  + numa_structure_defines(),
+                      'lock_deps'   : [],
+                      'other_deps'  : [],
+                      'uses_nzi'     : False}),
         ('rhqdlock',   {'source'      : 'rhqd_lock',
                         'defines'     : ['LOCK_TYPE_TATASLock',
                                          'LOCK_TYPE_WPRW_TATASLock',
@@ -371,7 +385,7 @@ for lock_id in lock_infos:
         other_deps.append(lock_infos[lock_dep]['variants'][0]['obj'])#Lock deps only alowed to have one variant
         other_deps.append(lock_infos[lock_dep]['other_deps'])
     ext = '.c'
-    if lock_info['source'] == 'cpprdx':
+    if lock_info['source'] == 'cpprdx' or lock_info['source'][:5] == 'rglue':
         ext = '.cpp'
     if lock_info['uses_nzi']:
         lock_info['variants'] = []
@@ -443,7 +457,8 @@ gcc_only_structures = [
     {'data_structure_define': 'USE_MICRO_BENCH',
      'data_structure_alias' : 'micro_bench'}]
 
-if not use_llvm:
+#if not use_llvm:
+if True:
 	locked_data_stuctures.extend(gcc_only_structures)
 
 benchmarked_locks = [
@@ -456,7 +471,21 @@ benchmarked_locks = [
     {'lock_defines': ['USE_QDLOCK_FUTEX'],
      'lock_alias' : 'qdlock_futex'},
     {'lock_defines': ['USE_CPPLOCK'],
-     'lock_alias' : 'cpplock'},
+     'lock_alias' : 'cpp_tatas'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpp_mcs'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpp_qd'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpp_hqd'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpp_qd_nodetach'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpp_qd_starve'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpp_mcs_starve'},
+    {'lock_defines': ['USE_CPPLOCK'],
+     'lock_alias' : 'cpp_qd_cas'},
     {'lock_defines': ['USE_OYAMA'],
      'lock_alias' : 'oyama'},
     {'lock_defines': ['USE_OYAMA', 'PRE_ALLOC_OPT'],
@@ -525,10 +554,10 @@ for locked_data_stucture in locked_data_stuctures:
 		  lock_defines + 
 		  numa_structure_defines()))
         objs = [object]
-        if 'USE_CPPLOCK' in lock_defines:
+        if 'cpp_tatas' == lock_alias:
             cppglue = env.Object(
-                target = (data_structure_alias + '_' + lock_alias + 'cppglue.o'),
-                source = ['src/datastructures_bench/synch_algorithms/glue.cpp'],
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_tatas.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_tatas.cpp'],
                 CPPPATH='qd_library:.',
                 CPPDEFINES = ([data_structure_define,
 		   print_thread_queue_stats_define,
@@ -536,6 +565,93 @@ for locked_data_stucture in locked_data_stuctures:
 		  lock_defines + 
 		  numa_structure_defines()))
             objs.append(cppglue)
+        if 'cpp_mcs' == lock_alias:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_mcs.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_mcs.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
+        if 'cpp_qd' == lock_alias:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_qd.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_qd.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
+        if 'cpp_hqd' == lock_alias:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_hqd.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_hqd.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
+        if 'cpp_qd_nodetach' == lock_alias:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_qd_nodetach.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_qd_nodetach.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
+        if 'cpp_qd_starve' == lock_alias:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_qd_starve.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_qd_starve.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
+        if 'cpp_mcs_starve' == lock_alias:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_mcs_starve.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_mcs_starve.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
+        if 'cpp_qd_cas' == lock_alias:
+            cppglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'cpp_qd_cas.o'),
+                source = ['src/datastructures_bench/synch_algorithms/glue_qd_cas.cpp'],
+                CPPPATH='qd_library:.',
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(cppglue)
+        if 'USE_QDLOCK' in lock_defines:
+            qdglue = env.Object(
+                target = (data_structure_alias + '_' + lock_alias + 'qdlock.o'),
+                source = ['src/datastructures_bench/synch_algorithms/qdlock.c'],
+                CPPDEFINES = ([data_structure_define,
+		   print_thread_queue_stats_define,
+		   queue_stats_define] + 
+		  lock_defines + 
+		  numa_structure_defines()))
+            objs.append(qdglue)
         env.Program(
                 target = (data_structure_alias + '_' + lock_alias),
                 source = objs)
